@@ -210,9 +210,9 @@ function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border py-5 text-center">
-        <span className="font-display text-lg font-bold text-foreground">
+        <a href="/" className="font-display text-lg font-bold text-foreground transition-opacity hover:opacity-70">
           ThoughtRelief
-        </span>
+        </a>
       </header>
       <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         {children}
@@ -239,7 +239,13 @@ export default function StartPage() {
           <h2 className="font-display mt-6 mb-2 text-3xl font-bold text-foreground">
             Still in development.
           </h2>
-          <p className="text-muted-foreground">Check back soon.</p>
+          <p className="mb-8 text-muted-foreground">Check back soon.</p>
+          <a
+            href="/"
+            className="rounded-xl border border-border bg-card px-8 py-3 font-semibold text-foreground transition-opacity hover:opacity-70"
+          >
+            Learn more about ThoughtRelief
+          </a>
         </div>
       </PageShell>
     );
