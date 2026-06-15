@@ -7,12 +7,6 @@ export function Navbar() {
         <span className="text-xl font-semibold tracking-tight text-foreground">
           ThoughtRelief
         </span>
-        <a
-          href="#waitlist"
-          className="rounded-lg border border-primary px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
-        >
-          Join the waitlist
-        </a>
       </div>
     </nav>
   );
