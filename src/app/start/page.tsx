@@ -236,24 +236,10 @@ export default function StartPage() {
       <PageShell>
         <div className="flex flex-col items-center text-center">
           <BonfireIllustration />
-          <div className="mt-4 mb-8 flex gap-2">
-            <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-primary [animation-delay:0ms]" />
-            <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-primary [animation-delay:150ms]" />
-            <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-primary [animation-delay:300ms]" />
-          </div>
-          <h2 className="font-display mb-3 text-3xl font-bold text-foreground">
-            Not ready yet — but almost.
+          <h2 className="font-display mt-6 mb-2 text-3xl font-bold text-foreground">
+            Still in development.
           </h2>
-          <p className="mb-8 max-w-sm text-muted-foreground">
-            ThoughtRelief isn&apos;t open yet — but it&apos;s almost ready. Join
-            the waitlist and you&apos;ll be first through the door.
-          </p>
-          <a
-            href="/#waitlist"
-            className="rounded-xl bg-primary px-8 py-3 font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            Join the waitlist
-          </a>
+          <p className="text-muted-foreground">Check back soon.</p>
         </div>
       </PageShell>
     );

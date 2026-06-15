@@ -191,7 +191,9 @@ export default function Home() {
       {/* Coming soon */}
       <section className="px-6 pb-28 text-center">
         <div className="mx-auto max-w-xl">
-          <p className="text-lg font-semibold text-foreground">Still in development.</p>
+          <p className="text-lg font-semibold text-foreground">
+            Still in development.
+          </p>
           <p className="mt-2 text-muted-foreground">Check back soon.</p>
         </div>
       </section>
