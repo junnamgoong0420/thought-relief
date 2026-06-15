@@ -1,5 +1,4 @@
 import { Navbar } from "~/components/navbar";
-import { WaitlistForm } from "~/components/waitlist-form";
 
 function FlameIcon() {
   return (
@@ -189,16 +188,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Waitlist */}
-      <section id="waitlist" className="px-6 pb-28 text-center">
+      {/* Coming soon */}
+      <section className="px-6 pb-28 text-center">
         <div className="mx-auto max-w-xl">
-          <h2 className="font-display mb-3 text-3xl font-bold text-foreground">
-            Be first to know when we launch.
-          </h2>
-          <p className="mb-8 text-muted-foreground">
-            No spam. No commitment. Just early access.
-          </p>
-          <WaitlistForm />
+          <p className="text-lg font-semibold text-foreground">Still in development.</p>
+          <p className="mt-2 text-muted-foreground">Check back soon.</p>
         </div>
       </section>
 
