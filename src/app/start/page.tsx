@@ -210,7 +210,10 @@ function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border py-5 text-center">
-        <a href="/" className="font-display text-lg font-bold text-foreground transition-opacity hover:opacity-70">
+        <a
+          href="/"
+          className="font-display text-lg font-bold text-foreground transition-opacity hover:opacity-70"
+        >
           ThoughtRelief
         </a>
       </header>
