@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { SignOutButton } from "~/components/sign-out-button";
+import { ADMIN_EMAIL } from "~/lib/constants";
+import { createClient } from "~/lib/supabase/client";
 
 function BonfireIllustration() {
   return (
@@ -206,16 +209,56 @@ function BonfireIllustration() {
   );
 }
 
-function PageShell({ children }: { children: React.ReactNode }) {
+function PageShell({
+  children,
+  signedIn,
+  isAdmin,
+}: {
+  children: React.ReactNode;
+  signedIn: boolean;
+  isAdmin: boolean;
+}) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b border-border py-5 text-center">
-        <a
-          href="/"
-          className="font-display text-lg font-bold text-foreground transition-opacity hover:opacity-70"
-        >
-          ThoughtRelief
-        </a>
+      <header className="border-b border-border py-5">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
+          <a
+            href="/"
+            className="font-display text-lg font-bold text-foreground transition-opacity hover:opacity-70"
+          >
+            ThoughtRelief
+          </a>
+          <div className="flex items-center gap-2">
+            {signedIn ? (
+              <>
+                {isAdmin && (
+                  <a
+                    href="/admin"
+                    className="rounded-lg px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Admin
+                  </a>
+                )}
+                <SignOutButton />
+              </>
+            ) : (
+              <>
+                <a
+                  href="/auth/login"
+                  className="rounded-lg px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Sign in
+                </a>
+                <a
+                  href="/auth/signup"
+                  className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  Sign up
+                </a>
+              </>
+            )}
+          </div>
+        </div>
       </header>
       <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         {children}
@@ -233,29 +276,31 @@ function PageShell({ children }: { children: React.ReactNode }) {
 export default function StartPage() {
   const [text, setText] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setUserEmail(data.user?.email ?? null);
+    });
+  }, []);
 
   if (submitted) {
     return (
-      <PageShell>
+      <PageShell signedIn={userEmail !== null} isAdmin={userEmail === ADMIN_EMAIL}>
         <div className="flex flex-col items-center text-center">
           <BonfireIllustration />
           <h2 className="font-display mt-6 mb-2 text-3xl font-bold text-foreground">
             Still in development.
           </h2>
-          <p className="mb-8 text-muted-foreground">Check back soon.</p>
-          <a
-            href="/"
-            className="rounded-xl border border-border bg-card px-8 py-3 font-semibold text-foreground transition-opacity hover:opacity-70"
-          >
-            Learn more about ThoughtRelief
-          </a>
+          <p className="text-muted-foreground">Check back soon.</p>
         </div>
       </PageShell>
     );
   }
 
   return (
-    <PageShell>
+    <PageShell signedIn={userEmail !== null} isAdmin={userEmail === ADMIN_EMAIL}>
       <svg
         viewBox="0 0 24 24"
         fill="none"

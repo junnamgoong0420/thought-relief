@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { Navbar } from "~/components/navbar";
+import { createClient } from "~/lib/supabase/server";
 
 function FlameIcon() {
   return (
@@ -104,7 +106,22 @@ const features = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: prefs } = await supabase
+      .from("user_preferences")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    redirect(prefs ? "/start" : "/onboarding");
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -181,10 +198,10 @@ export default function Home() {
             Gone when you&apos;re done.
           </h2>
           <p className="mx-auto max-w-lg text-lg text-muted-foreground">
-            Most AI tools remember everything you&apos;ve ever said. ThoughtRelief
-            doesn&apos;t. No history. No &ldquo;based on what you told me last
-            time.&rdquo; Each session is a clean slate — so you can actually let
-            it go, not just say it out loud.
+            Most AI tools remember everything you&apos;ve ever said.
+            ThoughtRelief doesn&apos;t. No history. No &ldquo;based on what you
+            told me last time.&rdquo; Each session is a clean slate — so you can
+            actually let it go, not just say it out loud.
           </p>
         </div>
       </section>
