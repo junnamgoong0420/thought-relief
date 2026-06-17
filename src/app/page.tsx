@@ -98,9 +98,9 @@ const features = [
   },
   {
     icon: <ShieldIcon />,
-    title: "Stays in the moment",
+    title: "No memory. Ever.",
     description:
-      "Your entries don't follow you. Nothing is saved or brought up in future sessions — vent the embarrassing, irrational thing without worrying it'll come back up.",
+      "The AI has no idea what you said last time — because there is no last time. Each session starts completely fresh. Vent the messy, irrational thing without it echoing back.",
   },
 ];
 
@@ -181,9 +181,10 @@ export default function Home() {
             Gone when you&apos;re done.
           </h2>
           <p className="mx-auto max-w-lg text-lg text-muted-foreground">
-            No history. No callbacks. No &ldquo;based on what you told me last
-            time.&rdquo; Each session is a clean slate — so you can vent the
-            full, honest, embarrassing thing.
+            Most AI tools remember everything you&apos;ve ever said. ThoughtRelief
+            doesn&apos;t. No history. No &ldquo;based on what you told me last
+            time.&rdquo; Each session is a clean slate — so you can actually let
+            it go, not just say it out loud.
           </p>
         </div>
       </section>
@@ -191,7 +192,9 @@ export default function Home() {
       {/* Coming soon */}
       <section className="px-6 pb-28 text-center">
         <div className="mx-auto max-w-xl">
-          <p className="text-lg font-semibold text-foreground">Still in development.</p>
+          <p className="text-lg font-semibold text-foreground">
+            Still in development.
+          </p>
           <p className="mt-2 text-muted-foreground">Check back soon.</p>
         </div>
       </section>
