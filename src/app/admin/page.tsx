@@ -34,18 +34,21 @@ export default async function AdminPage() {
   let users: User[] = [];
   let setupError = false;
   let prefsMap = new Map<string, UserPrefs>();
+  let totalReflections = 0;
 
   try {
     const admin = createAdminClient();
-    const [usersResult, prefsResult] = await Promise.all([
+    const [usersResult, prefsResult, reflectionsResult] = await Promise.all([
       admin.auth.admin.listUsers(),
       admin
         .from("user_preferences")
         .select("user_id, support_style, response_tone"),
+      admin.from("reflections").select("id", { count: "exact", head: true }),
     ]);
     users = usersResult.data?.users ?? [];
     const prefsData = (prefsResult.data ?? []) as UserPrefs[];
     prefsMap = new Map(prefsData.map((p) => [p.user_id, p]));
+    totalReflections = reflectionsResult.count ?? 0;
   } catch {
     setupError = true;
   }
@@ -83,9 +86,24 @@ export default async function AdminPage() {
           </div>
         ) : (
           <>
-            <p className="mb-8 text-sm text-muted-foreground">
-              {users.length} registered user{users.length !== 1 ? "s" : ""}
-            </p>
+            <div className="mb-8 flex gap-6">
+              <div className="rounded-xl border border-border bg-card px-6 py-4">
+                <p className="text-2xl font-bold text-foreground">
+                  {users.length}
+                </p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  registered user{users.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border bg-card px-6 py-4">
+                <p className="text-2xl font-bold text-foreground">
+                  {totalReflections}
+                </p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  total reflection{totalReflections !== 1 ? "s" : ""} generated
+                </p>
+              </div>
+            </div>
             <div className="overflow-hidden rounded-xl border border-border">
               <table className="w-full text-sm">
                 <thead className="border-b border-border bg-card">

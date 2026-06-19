@@ -1,6 +1,8 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { env } from "~/env";
+import { createAdminClient } from "~/lib/supabase/admin";
+import { createClient } from "~/lib/supabase/server";
 
 const CRISIS_KEYWORDS = [
   // Direct self-harm / suicide
@@ -172,6 +174,18 @@ Each microstep value must be a single sentence, second-person ("Try...", "Take..
   const unique = new Set(steps.map((s) => s.trim().toLowerCase().slice(0, 30)));
   if (!allFilled || unique.size < 3 || !microsteps.reflection?.trim()) {
     return Response.json({ fallback: true });
+  }
+
+  // Record the reflection (fire-and-forget — don't block the response)
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const admin = createAdminClient();
+    await admin.from("reflections").insert({ user_id: user?.id ?? null });
+  } catch {
+    // Non-fatal — analytics failure must never break the user experience
   }
 
   return Response.json({ crisis: false, microsteps });
