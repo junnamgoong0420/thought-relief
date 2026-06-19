@@ -206,16 +206,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Coming soon */}
-      <section className="px-6 pb-28 text-center">
-        <div className="mx-auto max-w-xl">
-          <p className="text-lg font-semibold text-foreground">
-            Still in development.
-          </p>
-          <p className="mt-2 text-muted-foreground">Check back soon.</p>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="border-t border-border px-6 py-6">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 text-center text-xs text-muted-foreground sm:flex-row sm:justify-between sm:text-left">
