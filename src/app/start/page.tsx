@@ -704,6 +704,60 @@ function CrisisView({
   );
 }
 
+function LimitView({
+  signedIn,
+  onBack,
+}: {
+  signedIn: boolean;
+  onBack: () => void;
+}) {
+  return (
+    <div className="flex w-full max-w-md flex-col items-center text-center">
+      <div className="w-full rounded-2xl border border-border bg-card px-8 py-10">
+        <p className="mb-4 text-3xl">🌙</p>
+        {signedIn ? (
+          <>
+            <h2 className="font-display mb-3 text-xl font-bold text-foreground">
+              You&apos;ve used all 7 reflections this week.
+            </h2>
+            <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
+              Your reflections reset every Monday. Come back then for a fresh
+              week.
+            </p>
+          </>
+        ) : (
+          <>
+            <h2 className="font-display mb-3 text-xl font-bold text-foreground">
+              You&apos;ve used your free reflection for today.
+            </h2>
+            <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
+              Sign in to get 7 reflections every week, or come back tomorrow for
+              another free one.
+            </p>
+          </>
+        )}
+        <div className="flex flex-col gap-3">
+          {!signedIn && (
+            <a
+              href="/auth/login"
+              className="rounded-full bg-primary px-10 py-3.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              Sign in
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Return to Reflection
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BusyView({
   onRetry,
   onBack,
@@ -825,7 +879,8 @@ type Phase =
   | "done"
   | "busy"
   | "vague"
-  | "safety";
+  | "safety"
+  | "limit";
 type UserPrefs = { supportStyle: string; responseTone: string } | null;
 
 export default function StartPage() {
@@ -836,6 +891,8 @@ export default function StartPage() {
   const [isFallback, setIsFallback] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userPrefs, setUserPrefs] = useState<UserPrefs>(null);
+  const [userLoaded, setUserLoaded] = useState(false);
+  const [serverLimitHit, setServerLimitHit] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -855,8 +912,11 @@ export default function StartPage() {
           });
         }
       }
+      setUserLoaded(true);
     });
   }, []);
+
+  const ANON_STORAGE_KEY = "thoughtrelief_anon_usage";
 
   async function handleSubmit() {
     if (!text.trim()) return;
@@ -864,6 +924,17 @@ export default function StartPage() {
     if (isVague(text)) {
       setPhase("vague");
       return;
+    }
+
+    // Enforce 1/day limit for confirmed anonymous users via localStorage
+    if (userLoaded && !signedIn) {
+      const today = new Date().toISOString().slice(0, 10);
+      const stored = JSON.parse(localStorage.getItem(ANON_STORAGE_KEY) ?? "{}");
+      const count = stored.date === today ? (stored.count ?? 0) : 0;
+      if (count >= 1) {
+        setPhase("limit");
+        return;
+      }
     }
 
     setPhase("loading");
@@ -874,7 +945,18 @@ export default function StartPage() {
         body: JSON.stringify({ text, ...(userPrefs ?? {}) }),
       });
 
-      if (res.status === 429 || res.status === 503 || res.status === 500) {
+      if (res.status === 429) {
+        const data = await res.json();
+        if (data.error === "limit") {
+          setServerLimitHit(true);
+          setPhase("limit");
+        } else {
+          setPhase("busy");
+        }
+        return;
+      }
+
+      if (res.status === 503 || res.status === 500) {
         setPhase("busy");
         return;
       }
@@ -892,6 +974,18 @@ export default function StartPage() {
       } else if (data.microsteps) {
         setMicrosteps(data.microsteps);
         setIsFallback(false);
+        // Track anonymous usage in localStorage after a successful reflection
+        if (!signedIn) {
+          const today = new Date().toISOString().slice(0, 10);
+          const stored = JSON.parse(
+            localStorage.getItem(ANON_STORAGE_KEY) ?? "{}",
+          );
+          const count = stored.date === today ? (stored.count ?? 0) : 0;
+          localStorage.setItem(
+            ANON_STORAGE_KEY,
+            JSON.stringify({ date: today, count: count + 1 }),
+          );
+        }
         setPhase("results");
       } else {
         setPhase("busy");
@@ -907,6 +1001,7 @@ export default function StartPage() {
   }
 
   function goBack() {
+    setServerLimitHit(false);
     setPhase("input");
   }
 
@@ -915,6 +1010,7 @@ export default function StartPage() {
     setMicrosteps(null);
     setChosenKey(null);
     setIsFallback(false);
+    setServerLimitHit(false);
     setPhase("input");
   }
 
@@ -925,6 +1021,14 @@ export default function StartPage() {
     return (
       <PageShell signedIn={signedIn} isAdmin={isAdmin}>
         <LoadingView />
+      </PageShell>
+    );
+  }
+
+  if (phase === "limit") {
+    return (
+      <PageShell signedIn={signedIn} isAdmin={isAdmin}>
+        <LimitView signedIn={signedIn || serverLimitHit} onBack={goBack} />
       </PageShell>
     );
   }

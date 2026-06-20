@@ -1,6 +1,7 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { env } from "~/env";
+import { ADMIN_EMAIL } from "~/lib/constants";
 import { createAdminClient } from "~/lib/supabase/admin";
 import { createClient } from "~/lib/supabase/server";
 
@@ -85,6 +86,39 @@ export async function POST(req: Request) {
 
   if (detectCrisis(text)) {
     return Response.json({ crisis: true });
+  }
+
+  // Rate limiting: authenticated users get 7 reflections per calendar week (Mon–Sun UTC)
+  // Wrapped in try/catch — a Supabase failure must never block the AI feature
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user && user.email !== ADMIN_EMAIL) {
+      const admin = createAdminClient();
+      const now = new Date();
+      const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const weekStart = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate() - daysFromMonday,
+        ),
+      ).toISOString();
+      const { count } = await admin
+        .from("reflections")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", weekStart);
+      if ((count ?? 0) >= 7) {
+        return Response.json({ error: "limit" }, { status: 429 });
+      }
+    }
+  } catch {
+    // Non-fatal: if the limit check fails, let the request through
   }
 
   const personalizationLines = [
