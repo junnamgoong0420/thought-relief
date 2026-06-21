@@ -90,35 +90,66 @@ export async function POST(req: Request) {
 
   // Rate limiting: authenticated users get 7 reflections per calendar week (Mon–Sun UTC)
   // Wrapped in try/catch — a Supabase failure must never block the AI feature
+  let userId: string | null = null;
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (user && user.email !== ADMIN_EMAIL) {
-      const admin = createAdminClient();
-      const now = new Date();
-      const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const weekStart = new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate() - daysFromMonday,
-        ),
-      ).toISOString();
-      const { count } = await admin
-        .from("reflections")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .gte("created_at", weekStart);
-      if ((count ?? 0) >= 7) {
-        return Response.json({ error: "limit" }, { status: 429 });
+    if (user) {
+      userId = user.id;
+
+      if (user.email !== ADMIN_EMAIL) {
+        const admin = createAdminClient();
+        const now = new Date();
+        const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const weekStart = new Date(
+          Date.UTC(
+            now.getUTCFullYear(),
+            now.getUTCMonth(),
+            now.getUTCDate() - daysFromMonday,
+          ),
+        ).toISOString();
+        const { count } = await admin
+          .from("reflections")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .gte("created_at", weekStart);
+        if ((count ?? 0) >= 7) {
+          return Response.json({ error: "limit" }, { status: 429 });
+        }
       }
     }
   } catch {
     // Non-fatal: if the limit check fails, let the request through
+  }
+
+  // Fetch past burnItOff and resetToZero suggestions to avoid repeating them
+  let pastBurnItOff: string[] = [];
+  let pastResetToZero: string[] = [];
+  if (userId) {
+    try {
+      const admin = createAdminClient();
+      const { data } = await admin
+        .from("reflections")
+        .select("burn_it_off, reset_to_zero")
+        .eq("user_id", userId)
+        .not("burn_it_off", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (data) {
+        pastBurnItOff = data
+          .map((r: { burn_it_off: string | null }) => r.burn_it_off)
+          .filter((s): s is string => Boolean(s));
+        pastResetToZero = data
+          .map((r: { reset_to_zero: string | null }) => r.reset_to_zero)
+          .filter((s): s is string => Boolean(s));
+      }
+    } catch {
+      // Non-fatal — history fetch failure must never block the AI call
+    }
   }
 
   const personalizationLines = [
@@ -132,10 +163,25 @@ export async function POST(req: Request) {
     ? `\n\nPersonalization for this student:\n${personalizationLines}`
     : "";
 
+  let varietyBlock = "";
+  if (pastBurnItOff.length > 0 || pastResetToZero.length > 0) {
+    varietyBlock =
+      "\n\nThis student has received these suggestions before — do NOT repeat them:";
+    if (pastBurnItOff.length > 0) {
+      varietyBlock += `\nPast "burnItOff" suggestions: ${pastBurnItOff.map((s) => `"${s}"`).join("; ")}`;
+    }
+    if (pastResetToZero.length > 0) {
+      varietyBlock += `\nPast "resetToZero" suggestions: ${pastResetToZero.map((s) => `"${s}"`).join("; ")}`;
+    }
+    varietyBlock +=
+      "\nGenerate meaningfully different suggestions for burnItOff and resetToZero this time.";
+  }
+
   let raw: string;
   try {
     const result = await generateText({
       model: gateway("openai/gpt-4.1-nano"),
+      temperature: 1.0,
       system: `You are a calm, grounded, and supportive companion for high school students facing academic panic, spiraling the night before a test. A student has shared how they're feeling.
 
 Your job is two parts:
@@ -157,7 +203,7 @@ Return ONLY a valid JSON object with exactly these four keys:
 - "burnItOff": a physical movement matched to their apparent energy level
 - "resetToZero": a grounding or reset technique matched to their specific emotional state
 
-Each microstep value must be a single sentence, second-person ("Try...", "Take...", "Write..."), under 35 words. No markdown. No extra text outside the JSON.${personalizationBlock}`,
+Each microstep value must be a single sentence, second-person ("Try...", "Take...", "Write..."), under 35 words. No markdown. No extra text outside the JSON.${personalizationBlock}${varietyBlock}`,
       prompt: `The student wrote: "${text}"`,
     });
     raw = result.text;
@@ -212,12 +258,12 @@ Each microstep value must be a single sentence, second-person ("Try...", "Take..
 
   // Record the reflection (fire-and-forget — don't block the response)
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
     const admin = createAdminClient();
-    await admin.from("reflections").insert({ user_id: user?.id ?? null });
+    await admin.from("reflections").insert({
+      user_id: userId,
+      burn_it_off: microsteps.burnItOff,
+      reset_to_zero: microsteps.resetToZero,
+    });
   } catch {
     // Non-fatal — analytics failure must never break the user experience
   }
