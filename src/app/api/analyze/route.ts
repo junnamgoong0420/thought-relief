@@ -117,7 +117,7 @@ export async function POST(req: Request) {
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id)
           .gte("created_at", weekStart);
-        if ((count ?? 0) >= 7) {
+        if ((count ?? 0) >= 10) {
           return Response.json({ error: "limit" }, { status: 429 });
         }
       }

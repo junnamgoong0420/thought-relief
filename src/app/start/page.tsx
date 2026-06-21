@@ -718,7 +718,7 @@ function LimitView({
         {signedIn ? (
           <>
             <h2 className="font-display mb-3 text-xl font-bold text-foreground">
-              You&apos;ve used all 7 reflections this week.
+              You&apos;ve used all 10 reflections this week.
             </h2>
             <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
               Your reflections reset every Monday. Come back then for a fresh
@@ -731,8 +731,8 @@ function LimitView({
               You&apos;ve used your free reflection for today.
             </h2>
             <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
-              Sign in to get 7 reflections every week, or come back tomorrow for
-              another free one.
+              Sign in to get 10 reflections every week, or come back tomorrow
+              for another free one.
             </p>
           </>
         )}
@@ -1120,9 +1120,15 @@ export default function StartPage() {
           placeholder={
             "I'm freaking out about tomorrow's chem test...\nJust type. There's no wrong way to start."
           }
+          maxLength={1000}
           rows={8}
           className="mb-6 w-full resize-none rounded-2xl border border-border bg-card px-6 py-5 text-left text-base text-foreground placeholder:italic placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none"
         />
+        {text.length >= 1000 && (
+          <p className="-mt-4 mb-4 text-right text-xs text-muted-foreground">
+            You&apos;ve reached the character limit.
+          </p>
+        )}
 
         <div className="flex flex-col items-center gap-3">
           <button
