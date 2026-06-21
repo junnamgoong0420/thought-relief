@@ -102,7 +102,7 @@ const features = [
     icon: <ShieldIcon />,
     title: "No memory. Ever.",
     description:
-      "The AI has no idea what you said last time — because there is no last time. Each session starts completely fresh. Vent the messy, irrational thing without it echoing back.",
+      "The AI has no idea what you said last time. There is no last time. Each session starts completely fresh. Vent the messy, irrational thing without it echoing back.",
   },
 ];
 
@@ -153,7 +153,7 @@ export default async function Home() {
           <p className="mb-10 text-lg text-muted-foreground">
             Thought Relief helps you dump what&apos;s in your head, see
             what&apos;s real vs. what&apos;s panic, and pick one tiny thing to
-            do next — in under 3 minutes. What you share here stays here.
+            do next, in under 3 minutes. What you share here stays here.
           </p>
 
           <a
@@ -200,7 +200,7 @@ export default async function Home() {
           <p className="mx-auto max-w-lg text-lg text-muted-foreground">
             Most AI tools remember everything you&apos;ve ever said.
             ThoughtRelief doesn&apos;t. No history. No &ldquo;based on what you
-            told me last time.&rdquo; Each session is a clean slate — so you can
+            told me last time.&rdquo; Each session is a clean slate, so you can
             actually let it go, not just say it out loud.
           </p>
         </div>
