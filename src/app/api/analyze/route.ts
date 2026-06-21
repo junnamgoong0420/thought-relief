@@ -56,20 +56,20 @@ const gateway = createOpenAI({
 
 const SUPPORT_STYLE_HINTS: Record<string, string> = {
   practical:
-    "The student prefers practical, action-focused support — skip the emotional validation fluff and lead with concrete, doable steps.",
+    "The student prefers practical, action-focused support. Skip the emotional validation fluff and lead with concrete, doable steps.",
   emotional:
-    "The student prefers emotional support — prioritize warmth, validation, and empathy before anything action-oriented.",
+    "The student prefers emotional support. Prioritize warmth, validation, and empathy before anything action-oriented.",
   balanced:
-    "The student prefers a balanced mix of emotional warmth and practical guidance — blend both equally.",
+    "The student prefers a balanced mix of emotional warmth and practical guidance. Blend both equally.",
 };
 
 const TONE_HINTS: Record<string, string> = {
   gentle:
-    "Use a very gentle, soft tone — never blunt, never pushy. Ease into every suggestion.",
+    "Use a very gentle, soft tone. Never blunt, never pushy. Ease into every suggestion.",
   direct:
-    "Use a direct, no-nonsense tone — get to the point quickly without excessive softening.",
+    "Use a direct, no-nonsense tone. Get to the point quickly without excessive softening.",
   balanced:
-    "Use a balanced tone — warm but not overly soft, clear but not blunt.",
+    "Use a balanced tone. Warm but not overly soft, clear but not blunt.",
 };
 
 export async function POST(req: Request) {
@@ -166,7 +166,7 @@ export async function POST(req: Request) {
   let varietyBlock = "";
   if (pastBurnItOff.length > 0 || pastResetToZero.length > 0) {
     varietyBlock =
-      "\n\nThis student has received these suggestions before — do NOT repeat them:";
+      "\n\nThis student has received these suggestions before. Do NOT repeat them:";
     if (pastBurnItOff.length > 0) {
       varietyBlock += `\nPast "burnItOff" suggestions: ${pastBurnItOff.map((s) => `"${s}"`).join("; ")}`;
     }
@@ -190,11 +190,11 @@ Your job is two parts:
 
 2. Generate exactly 3 incredibly small, low-friction action steps (each doable in under 5 minutes).
 
-CRITICAL — make every suggestion feel written specifically for THIS student:
+CRITICAL: make every suggestion feel written specifically for THIS student:
 - Read their message carefully. Pull out concrete details: the subject (e.g. chemistry, calculus, history), the specific fear (blanking on formulas, not finishing, not understanding), the emotional state (panicked, frozen, exhausted).
-- "channelIntoWork" must reference the actual subject or struggle they mentioned. Never say "review your notes" or "study something familiar" generically — write it for them. E.g. if they mentioned chemistry formulas, say "Write out just 2 chemistry formulas from memory, then check one against your notes." If they mentioned history dates, say "Pick one event and write its date and a one-sentence summary."
+- "channelIntoWork" must reference the actual subject or struggle they mentioned. Never say "review your notes" or "study something familiar" generically. Write it for them specifically. E.g. if they mentioned chemistry formulas, say "Write out just 2 chemistry formulas from memory, then check one against your notes." If they mentioned history dates, say "Pick one event and write its date and a one-sentence summary."
 - "burnItOff" should feel matched to their energy level. If they seem exhausted or frozen, suggest something very gentle (stretch, slow walk). If they seem wired or frantic, suggest something more active (jumping jacks, shaking out hands).
-- "resetToZero" should feel like a direct response to their specific emotional state — not a generic breathing exercise unless it truly fits.
+- "resetToZero" should feel like a direct response to their specific emotional state, not a generic breathing exercise unless it truly fits.
 - Vary your language and suggestions. Never repeat phrasing from the student's own message back to them as if it were advice.
 
 Return ONLY a valid JSON object with exactly these four keys:
@@ -203,7 +203,7 @@ Return ONLY a valid JSON object with exactly these four keys:
 - "burnItOff": a physical movement matched to their apparent energy level
 - "resetToZero": a grounding or reset technique matched to their specific emotional state
 
-Each microstep value must be a single sentence, second-person ("Try...", "Take...", "Write..."), under 35 words. No markdown. No extra text outside the JSON.${personalizationBlock}${varietyBlock}`,
+Each microstep value must be a single sentence, second-person ("Try...", "Take...", "Write..."), under 35 words. No markdown. No em dashes (—). No extra text outside the JSON.${personalizationBlock}${varietyBlock}`,
       prompt: `The student wrote: "${text}"`,
     });
     raw = result.text;

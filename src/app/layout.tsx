@@ -11,9 +11,9 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Thought Relief — Calm the spiral before your test",
+  title: "Thought Relief: Calm the spiral before your test",
   description:
-    "Dump what's in your head, see what's real vs. what's panic, and pick one tiny thing to do next — in under 3 minutes.",
+    "Dump what's in your head, see what's real vs. what's panic, and pick one tiny thing to do next, in under 3 minutes.",
 };
 
 export default function RootLayout({

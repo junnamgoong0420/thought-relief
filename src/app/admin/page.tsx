@@ -17,6 +17,8 @@ const TONE_LABELS: Record<string, string> = {
   direct: "Direct",
 };
 
+const EMPTY = "N/A";
+
 type UserPrefs = {
   user_id: string;
   support_style: string;
@@ -133,14 +135,14 @@ export default async function AdminPage() {
                     const provider =
                       u.app_metadata?.provider ??
                       u.identities?.[0]?.provider ??
-                      "—";
+                      EMPTY;
                     const created = u.created_at
                       ? new Date(u.created_at).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "short",
                           day: "numeric",
                         })
-                      : "—";
+                      : EMPTY;
                     const lastSignIn = u.last_sign_in_at
                       ? new Date(u.last_sign_in_at).toLocaleDateString(
                           "en-US",
@@ -150,16 +152,16 @@ export default async function AdminPage() {
                             day: "numeric",
                           },
                         )
-                      : "—";
+                      : EMPTY;
                     const prefs = prefsMap.get(u.id);
                     const supportLabel = prefs
                       ? (SUPPORT_LABELS[prefs.support_style] ??
                         prefs.support_style)
-                      : "—";
+                      : EMPTY;
                     const toneLabel = prefs
                       ? (TONE_LABELS[prefs.response_tone] ??
                         prefs.response_tone)
-                      : "—";
+                      : EMPTY;
                     const rowClass =
                       i % 2 === 0
                         ? "border-b border-border/50"
@@ -168,7 +170,7 @@ export default async function AdminPage() {
                     return (
                       <tr key={u.id} className={rowClass}>
                         <td className="px-4 py-3 text-foreground">
-                          {u.email ?? "—"}
+                          {u.email ?? EMPTY}
                           {u.email === ADMIN_EMAIL && (
                             <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                               admin

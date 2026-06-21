@@ -471,7 +471,7 @@ const FALLBACK_MICROSTEPS = {
   reflection:
     "You're clearly feeling overwhelmed right now, and that's completely okay. One small step is all that's needed tonight.",
   channelIntoWork:
-    "Review one familiar topic for just 5 minutes — pick something you already know a bit.",
+    "Review one familiar topic for just 5 minutes. Pick something you already know a bit.",
   burnItOff:
     "Stand up and walk around for 3 minutes to shake the tension out of your body.",
   resetToZero:
@@ -508,7 +508,7 @@ function MicrostepResults({
         <h2 className="font-display mt-4 mb-1 text-2xl font-bold text-foreground">
           {isFallback
             ? "Here's something you can still do right now."
-            : "Good — you let it out."}
+            : "Good. You let it out."}
         </h2>
         <p className="text-sm text-muted-foreground">
           {isFallback
@@ -642,7 +642,7 @@ function CrisisView({
         </h2>
         <p className="mb-7 text-sm leading-relaxed text-muted-foreground">
           This app isn&apos;t the right place for what you&apos;re carrying
-          right now — but trained people are, and they want to help.
+          right now, but trained people are, and they want to help.
         </p>
         <div className="mb-6 space-y-2 text-left">
           <div className="rounded-xl border border-border px-5 py-4">
@@ -650,7 +650,7 @@ function CrisisView({
               Talk to your school counselor
             </p>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              They&apos;re there exactly for moments like this — reach out first
+              They&apos;re there exactly for moments like this. Reach out first
               thing tomorrow, or ask a trusted teacher to connect you today.
             </p>
           </div>
@@ -659,7 +659,7 @@ function CrisisView({
               Call or text <span className="text-primary">988</span>
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Suicide &amp; Crisis Lifeline — free, confidential, 24/7
+              Suicide &amp; Crisis Lifeline: free, confidential, 24/7
             </p>
           </div>
           <div className="rounded-xl border border-border px-5 py-4">
@@ -667,7 +667,7 @@ function CrisisView({
               Text HOME to <span className="text-primary">741741</span>
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Crisis Text Line — free, confidential, 24/7
+              Crisis Text Line: free, confidential, 24/7
             </p>
           </div>
         </div>
@@ -1110,7 +1110,7 @@ export default function StartPage() {
           What&apos;s on your mind tonight?
         </h1>
         <p className="mb-8 text-muted-foreground">
-          No need to organize it. Just let it out — we&apos;ll help you make
+          No need to organize it. Just let it out, and we&apos;ll help you make
           sense of it.
         </p>
 
