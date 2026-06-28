@@ -468,8 +468,9 @@ function isVague(text: string): boolean {
 }
 
 const FALLBACK_MICROSTEPS = {
-  reflection:
-    "You're clearly feeling overwhelmed right now, and that's completely okay. One small step is all that's needed tonight.",
+  fact: "You're here, still trying, and that matters.",
+  fear: "It feels like everything is on the line tonight, but that's the anxiety talking.",
+  contextTag: "general",
   channelIntoWork:
     "Review one familiar topic for just 5 minutes. Pick something you already know a bit.",
   burnItOff:
@@ -479,7 +480,9 @@ const FALLBACK_MICROSTEPS = {
 };
 
 type Microsteps = {
-  reflection: string;
+  fact: string;
+  fear: string;
+  contextTag: string;
   channelIntoWork: string;
   burnItOff: string;
   resetToZero: string;
@@ -518,13 +521,23 @@ function MicrostepResults({
       </div>
 
       {!isFallback && (
-        <div className="mb-6 rounded-2xl border border-border bg-card px-5 py-4">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            What&apos;s actually true right now
-          </p>
-          <p className="text-sm leading-relaxed text-foreground">
-            {microsteps.reflection}
-          </p>
+        <div className="mb-6 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-card px-5 py-4">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              What&apos;s actually true
+            </p>
+            <p className="text-sm leading-relaxed text-foreground">
+              {microsteps.fact}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card px-5 py-4">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              What fear looks like
+            </p>
+            <p className="text-sm leading-relaxed text-foreground">
+              {microsteps.fear}
+            </p>
+          </div>
         </div>
       )}
 
@@ -536,18 +549,15 @@ function MicrostepResults({
             onClick={() => onSelect(key)}
             className="group flex flex-col rounded-2xl border-2 border-border bg-card p-5 text-left transition-all hover:border-primary hover:shadow-md active:scale-[0.98]"
           >
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-3 flex items-center gap-2">
               <span className="text-xl">{icon}</span>
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground group-hover:text-foreground">
                 {label}
               </span>
             </div>
-            <p className="flex-1 text-sm leading-relaxed text-foreground">
+            <p className="text-sm leading-relaxed text-foreground">
               {microsteps[key]}
             </p>
-            <div className="mt-4 text-xs font-medium text-muted-foreground transition-colors group-hover:text-primary">
-              I&apos;ll do this →
-            </div>
           </button>
         ))}
       </div>
@@ -555,31 +565,33 @@ function MicrostepResults({
   );
 }
 
-function DoneView({
+function PlanView({
   chosenKey,
   chosenStep,
-  onReset,
-  signedIn,
+  actionPlan,
+  actionPlanLoading,
+  onAdvance,
 }: {
   chosenKey: MicrostepKey;
   chosenStep: string;
-  onReset: () => void;
-  signedIn: boolean;
+  actionPlan: string[] | null;
+  actionPlanLoading: boolean;
+  onAdvance: () => void;
 }) {
   const card = CARDS.find((c) => c.key === chosenKey) ?? CARDS[0];
   return (
     <div className="flex w-full max-w-lg flex-col items-center text-center">
-      <EmberIllustration />
+      <BonfireIllustration size="sm" />
 
-      <h2 className="font-display mt-6 mb-2 text-3xl font-bold text-foreground sm:text-4xl">
-        You made it through.
+      <h2 className="font-display mt-4 mb-1 text-2xl font-bold text-foreground">
+        Here&apos;s your plan.
       </h2>
-      <p className="mb-6 text-muted-foreground">
-        One small step chosen. That&apos;s enough for tonight.
+      <p className="mb-6 text-sm text-muted-foreground">
+        Small steps. Right now.
       </p>
 
       {/* Chosen microstep */}
-      <div className="mb-8 w-full rounded-2xl border border-border bg-card px-6 py-5 text-left">
+      <div className="mb-5 w-full rounded-2xl border border-border bg-card px-6 py-4 text-left">
         <div className="mb-2 flex items-center gap-2">
           <span className="text-lg">{card.icon}</span>
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -589,10 +601,117 @@ function DoneView({
         <p className="text-sm leading-relaxed text-foreground">{chosenStep}</p>
       </div>
 
-      <p className="mb-8 max-w-sm text-sm leading-relaxed text-muted-foreground">
-        You separated the facts from the fear. The noise didn&apos;t win. Come
-        back anytime you need to clear your head.
+      {/* Action plan steps */}
+      {actionPlanLoading && (
+        <div className="mb-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-6">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="dot h-2 w-2 rounded-full bg-primary"
+              style={{ animationDelay: `${i * 0.22}s` }}
+            />
+          ))}
+        </div>
+      )}
+
+      {!actionPlanLoading && actionPlan && (
+        <div className="mb-5 w-full rounded-2xl border border-border bg-card px-6 py-5 text-left">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Steps
+          </p>
+          <ol className="space-y-3">
+            {actionPlan.map((step, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: steps are ordered and stable, no reordering occurs
+              <li key={i} className="flex gap-3">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                  {i + 1}
+                </span>
+                <p className="text-sm leading-relaxed text-foreground">
+                  {step}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={onAdvance}
+        className="rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90"
+      >
+        Done
+      </button>
+    </div>
+  );
+}
+
+function DoneView({
+  onReset,
+  signedIn,
+  onRegenerate,
+  regenerateCount,
+}: {
+  onReset: () => void;
+  signedIn: boolean;
+  onRegenerate: () => void;
+  regenerateCount: number;
+}) {
+  const [feedback, setFeedback] = useState<"yes" | "no" | null>(null);
+
+  function handleNo() {
+    if (regenerateCount >= 10) {
+      setFeedback("no");
+      return;
+    }
+    onRegenerate();
+  }
+
+  return (
+    <div className="flex w-full max-w-lg flex-col items-center text-center">
+      <EmberIllustration />
+
+      <h2 className="font-display mt-6 mb-2 text-3xl font-bold text-foreground sm:text-4xl">
+        Nice work.
+      </h2>
+      <p className="mb-8 text-muted-foreground">
+        One small step chosen. That&apos;s enough.
       </p>
+
+      {/* Did this help? */}
+      <div className="mb-8 w-full rounded-2xl border border-border bg-card px-6 py-5">
+        {feedback === "yes" ? (
+          <p className="font-display text-lg font-bold text-foreground">
+            Glad it helped.
+          </p>
+        ) : feedback === "no" && regenerateCount >= 10 ? (
+          <p className="text-sm text-muted-foreground">
+            You&apos;ve reached the regeneration limit for this session.
+          </p>
+        ) : (
+          <>
+            <p className="mb-4 text-sm font-medium text-foreground">
+              Did this help?
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setFeedback("yes")}
+                className="rounded-full border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                👍 Yes
+              </button>
+              <button
+                type="button"
+                onClick={handleNo}
+                className="rounded-full border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                👎 Not really
+              </button>
+            </div>
+          </>
+        )}
+      </div>
 
       {signedIn ? (
         <button
@@ -875,6 +994,8 @@ type Phase =
   | "input"
   | "loading"
   | "results"
+  | "action-loading"
+  | "plan"
   | "crisis"
   | "done"
   | "busy"
@@ -893,6 +1014,9 @@ export default function StartPage() {
   const [userPrefs, setUserPrefs] = useState<UserPrefs>(null);
   const [userLoaded, setUserLoaded] = useState(false);
   const [serverLimitHit, setServerLimitHit] = useState(false);
+  const [actionPlan, setActionPlan] = useState<string[] | null>(null);
+  const [actionPlanLoading, setActionPlanLoading] = useState(false);
+  const [regenerateCount, setRegenerateCount] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
@@ -995,9 +1119,76 @@ export default function StartPage() {
     }
   }
 
-  function handleSelect(key: MicrostepKey) {
+  const FALLBACK_STEPS: Record<MicrostepKey, string[]> = {
+    channelIntoWork: [
+      "Open your notes to one specific topic you're worried about.",
+      "Write down what you already know about it from memory.",
+      "Check your notes for anything you missed and circle it.",
+      "Read that circled part once slowly out loud.",
+      "Close your notes and repeat it back to yourself in one sentence.",
+    ],
+    burnItOff: [
+      "Stand up from where you are right now.",
+      "Shake out your hands and roll your shoulders back.",
+      "Walk to another room or step outside for 2 minutes.",
+      "Take three slow, deep breaths while you walk.",
+      "Return to your space and sit back down.",
+    ],
+    resetToZero: [
+      "Put down whatever is in your hands and sit up straight.",
+      "Close your eyes and breathe in slowly for 4 counts.",
+      "Hold for 2 counts, then breathe out for 6 counts.",
+      "Repeat that breath cycle two more times.",
+      "Open your eyes and notice one thing around you that is calm.",
+    ],
+  };
+
+  async function fetchActionPlan(
+    key: MicrostepKey,
+    ms: Microsteps,
+  ): Promise<string[]> {
+    try {
+      const res = await fetch("/api/action-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chosenKey: key,
+          microstep: ms[key],
+          originalText: text,
+          contextTag: ms.contextTag,
+          ...(userPrefs ?? {}),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.steps) && data.steps.length >= 3) {
+          return data.steps as string[];
+        }
+      }
+    } catch {
+      // non-fatal — fall through to fallback
+    }
+    return FALLBACK_STEPS[key];
+  }
+
+  async function handleSelect(key: MicrostepKey) {
+    if (!microsteps) return;
     setChosenKey(key);
-    setPhase("done");
+    setActionPlan(null);
+    setPhase("action-loading");
+    const steps = await fetchActionPlan(key, microsteps);
+    setActionPlan(steps);
+    setPhase("plan");
+  }
+
+  async function handleRegenerate() {
+    if (regenerateCount >= 10 || !chosenKey || !microsteps) return;
+    setRegenerateCount((c) => c + 1);
+    setActionPlanLoading(true);
+    setPhase("plan");
+    const steps = await fetchActionPlan(chosenKey, microsteps);
+    setActionPlan(steps);
+    setActionPlanLoading(false);
   }
 
   function goBack() {
@@ -1011,13 +1202,16 @@ export default function StartPage() {
     setChosenKey(null);
     setIsFallback(false);
     setServerLimitHit(false);
+    setActionPlan(null);
+    setActionPlanLoading(false);
+    setRegenerateCount(0);
     setPhase("input");
   }
 
   const signedIn = userEmail !== null;
   const isAdmin = userEmail === ADMIN_EMAIL;
 
-  if (phase === "loading") {
+  if (phase === "loading" || phase === "action-loading") {
     return (
       <PageShell signedIn={signedIn} isAdmin={isAdmin}>
         <LoadingView />
@@ -1069,14 +1263,28 @@ export default function StartPage() {
     );
   }
 
-  if (phase === "done" && microsteps && chosenKey) {
+  if (phase === "plan" && microsteps && chosenKey) {
+    return (
+      <PageShell signedIn={signedIn} isAdmin={isAdmin}>
+        <PlanView
+          chosenKey={chosenKey}
+          chosenStep={microsteps[chosenKey]}
+          actionPlan={actionPlan}
+          actionPlanLoading={actionPlanLoading}
+          onAdvance={() => setPhase("done")}
+        />
+      </PageShell>
+    );
+  }
+
+  if (phase === "done") {
     return (
       <PageShell signedIn={signedIn} isAdmin={isAdmin}>
         <DoneView
-          chosenKey={chosenKey}
-          chosenStep={microsteps[chosenKey]}
           onReset={reset}
           signedIn={signedIn}
+          onRegenerate={handleRegenerate}
+          regenerateCount={regenerateCount}
         />
       </PageShell>
     );
