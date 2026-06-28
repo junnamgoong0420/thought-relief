@@ -5,6 +5,9 @@ import { ADMIN_EMAIL } from "~/lib/constants";
 import { createAdminClient } from "~/lib/supabase/admin";
 import { createClient } from "~/lib/supabase/server";
 
+// Context tags the AI infers to tailor responses; not stored in DB
+type ContextTag = "test_anxiety" | "interpersonal" | "overthinking" | "general";
+
 const CRISIS_KEYWORDS = [
   // Direct self-harm / suicide
   "kill myself",
@@ -184,11 +187,15 @@ export async function POST(req: Request) {
       temperature: 1.0,
       system: `You are a calm, grounded, and supportive companion for high school students facing academic panic, spiraling the night before a test. A student has shared how they're feeling.
 
-Your job is two parts:
+Your job is three parts:
 
-1. Write a short reflection (1–3 sentences) that gently separates what is a real fact right now from what is a worry about the future. Be warm and peer-like. Do NOT use clinical terms like "cognitive distortion," "catastrophizing," or "CBT." Do not be brutal or blunt. Just softly point out what is actually true right now versus what feels true but is an assumption.
+1. Infer the context type from the student's message and set "contextTag" to one of: "test_anxiety" (academic stress, exam fear, studying), "interpersonal" (friendship, relationship, social conflict), "overthinking" (spiraling thoughts, rumination, not clearly external), or "general" (anything else). This is primarily a test-anxiety tool, so lean toward "test_anxiety" when the message could fit multiple categories.
 
-2. Generate exactly 3 incredibly small, low-friction action steps (each doable in under 5 minutes).
+2. Write two short, separate observations about the student's situation:
+   - "fact": 1–2 sentences of hard, literal truth — only what is objectively happening right now. State it plainly and specifically: the subject, the situation, what they've actually done or not done. No interpretation, no emotional framing, no softening. Just the facts as they are.
+   - "fear": 1–2 sentences naming the emotional assumption or catastrophic story they're telling themselves about the future. Explicitly flag these as assumptions — not facts. Use language like "You're assuming...", "The fear here is the belief that...", or "Your mind is treating it as certain that..." — make it clear these are interpretations or predictions, not things that have actually happened.
+
+3. Generate exactly 3 incredibly small, low-friction action steps (each doable in under 5 minutes).
 
 CRITICAL: make every suggestion feel written specifically for THIS student:
 - Read their message carefully. Pull out concrete details: the subject (e.g. chemistry, calculus, history), the specific fear (blanking on formulas, not finishing, not understanding), the emotional state (panicked, frozen, exhausted).
@@ -197,8 +204,10 @@ CRITICAL: make every suggestion feel written specifically for THIS student:
 - "resetToZero" should feel like a direct response to their specific emotional state, not a generic breathing exercise unless it truly fits.
 - Vary your language and suggestions. Never repeat phrasing from the student's own message back to them as if it were advice.
 
-Return ONLY a valid JSON object with exactly these four keys:
-- "reflection": 1–3 warm sentences gently separating facts from future-worry assumptions (no jargon, no clinical language)
+Return ONLY a valid JSON object with exactly these six keys:
+- "contextTag": one of "test_anxiety" | "interpersonal" | "overthinking" | "general"
+- "fact": 1–2 sentences of hard, literal, objective truth — only what is concretely happening right now (no emotional framing, no softening, just the specific real situation)
+- "fear": 1–2 sentences naming the emotional assumption or catastrophic story they're telling themselves — explicitly framed as assumptions, not facts (use "You're assuming...", "The fear is the belief that...", or similar language to make clear these are interpretations, not certainties)
 - "channelIntoWork": a personalized test-prep action tied to the specific subject or struggle they mentioned (under 5 minutes)
 - "burnItOff": a physical movement matched to their apparent energy level
 - "resetToZero": a grounding or reset technique matched to their specific emotional state
@@ -216,7 +225,9 @@ Each microstep value must be a single sentence, second-person ("Try...", "Take..
   }
 
   let microsteps: {
-    reflection: string;
+    contextTag: ContextTag;
+    fact: string;
+    fear: string;
     channelIntoWork: string;
     burnItOff: string;
     resetToZero: string;
@@ -252,7 +263,12 @@ Each microstep value must be a single sentence, second-person ("Try...", "Take..
     (s) => typeof s === "string" && s.trim().length > 5,
   );
   const unique = new Set(steps.map((s) => s.trim().toLowerCase().slice(0, 30)));
-  if (!allFilled || unique.size < 3 || !microsteps.reflection?.trim()) {
+  if (
+    !allFilled ||
+    unique.size < 3 ||
+    !microsteps.fact?.trim() ||
+    !microsteps.fear?.trim()
+  ) {
     return Response.json({ fallback: true });
   }
 
