@@ -443,11 +443,6 @@ const CARD_LABEL = Object.fromEntries(CARDS.map((c) => [c.key, c.label]));
 
 const ANON_STORAGE_KEY = "thoughtrelief_anon_usage";
 
-function generatePlanTitle(chosenStep: string): string {
-  const first = chosenStep.split(/[.!?]/)[0].trim();
-  return first.length > 47 ? `${first.slice(0, 44)}...` : first;
-}
-
 // ─── Saved Actions Sidebar ───────────────────────────────────────────────────
 
 function SavedActionsPanel({
@@ -457,8 +452,6 @@ function SavedActionsPanel({
   plans: SavedPlan[];
   loading: boolean;
 }) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
   return (
     <div className="flex h-full flex-col">
       <div className="shrink-0 border-b border-border px-5 py-4">
@@ -480,51 +473,33 @@ function SavedActionsPanel({
         ) : (
           <div className="space-y-2">
             {plans.map((plan) => (
-              <div
+              <a
                 key={plan.id}
-                className="rounded-xl border border-border bg-card"
+                href={`/saved-plan/${plan.id}`}
+                className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 hover:bg-accent"
               >
-                <button
-                  type="button"
-                  onClick={() =>
-                    setExpandedId((id) => (id === plan.id ? null : plan.id))
-                  }
-                  className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {plan.title}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {CARD_LABEL[plan.chosen_key] ?? plan.chosen_key}
+                  </p>
+                </div>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  className="mt-1 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {plan.title}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {CARD_LABEL[plan.chosen_key] ?? plan.chosen_key}
-                    </p>
-                  </div>
-                  <span className="mt-0.5 shrink-0 text-xs text-muted-foreground">
-                    {expandedId === plan.id ? "▲" : "▼"}
-                  </span>
-                </button>
-
-                {expandedId === plan.id && (
-                  <div className="border-t border-border px-4 py-4">
-                    <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-                      {plan.chosen_step}
-                    </p>
-                    <ol className="space-y-2.5">
-                      {plan.steps.map((step, i) => (
-                        // biome-ignore lint/suspicious/noArrayIndexKey: steps are ordered and stable
-                        <li key={i} className="flex gap-2.5">
-                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                            {i + 1}
-                          </span>
-                          <p className="text-xs leading-relaxed text-foreground">
-                            {step}
-                          </p>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-              </div>
+                  <polyline points="5 2 10 7 5 12" />
+                </svg>
+              </a>
             ))}
           </div>
         )}
@@ -1423,7 +1398,16 @@ export default function StartPage() {
     if (!chosenKey || !microsteps || !actionPlan || !userId) return;
     const supabase = supabaseRef.current;
     const chosenStep = microsteps[chosenKey];
-    const title = generatePlanTitle(chosenStep);
+    const titleRes = await fetch("/api/generate-title", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ originalText: text, chosenStep, chosenKey }),
+    });
+    const first = chosenStep.split(/[.!?]/)[0].trim();
+    const fallback = first.length > 20 ? `${first.slice(0, 17)}...` : first;
+    const title = titleRes.ok
+      ? ((await titleRes.json()) as { title: string }).title
+      : fallback;
     const { data: inserted } = await supabase
       .from("saved_plans")
       .insert({
