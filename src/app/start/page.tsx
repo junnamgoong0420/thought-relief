@@ -443,11 +443,6 @@ const CARD_LABEL = Object.fromEntries(CARDS.map((c) => [c.key, c.label]));
 
 const ANON_STORAGE_KEY = "thoughtrelief_anon_usage";
 
-function generatePlanTitle(chosenStep: string): string {
-  const first = chosenStep.split(/[.!?]/)[0].trim();
-  return first.length > 47 ? `${first.slice(0, 44)}...` : first;
-}
-
 // ─── Saved Actions Sidebar ───────────────────────────────────────────────────
 
 function SavedActionsPanel({
@@ -1423,7 +1418,16 @@ export default function StartPage() {
     if (!chosenKey || !microsteps || !actionPlan || !userId) return;
     const supabase = supabaseRef.current;
     const chosenStep = microsteps[chosenKey];
-    const title = generatePlanTitle(chosenStep);
+    const titleRes = await fetch("/api/generate-title", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ originalText: text, chosenStep, chosenKey }),
+    });
+    const first = chosenStep.split(/[.!?]/)[0].trim();
+    const fallback = first.length > 47 ? `${first.slice(0, 44)}...` : first;
+    const title = titleRes.ok
+      ? ((await titleRes.json()) as { title: string }).title
+      : fallback;
     const { data: inserted } = await supabase
       .from("saved_plans")
       .insert({
