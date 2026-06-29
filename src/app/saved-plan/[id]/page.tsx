@@ -1,5 +1,5 @@
-import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "~/lib/supabase/server";
 
 const CARD_LABEL: Record<string, string> = {
