@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { SignOutButton } from "~/components/sign-out-button";
 import { ADMIN_EMAIL } from "~/lib/constants";
 import { createClient } from "~/lib/supabase/client";
@@ -173,9 +173,7 @@ function EmberIllustration() {
           .em-s3{animation:em-smoke 2.8s ease-out infinite;animation-delay:2.1s}
         `}</style>
       </defs>
-      {/* Ambient glow */}
       <ellipse cx="100" cy="82" rx="70" ry="18" fill="url(#em-glow)" />
-      {/* Logs */}
       <rect
         x="18"
         y="70"
@@ -194,9 +192,7 @@ function EmberIllustration() {
         fill="#2a0f05"
         transform="rotate(18 145 77)"
       />
-      {/* Charcoal bed */}
       <ellipse cx="100" cy="82" rx="42" ry="10" fill="#140401" />
-      {/* Glowing ember patches */}
       <ellipse
         cx="82"
         cy="79"
@@ -223,11 +219,9 @@ function EmberIllustration() {
         fill="#d97706"
         className="em-g1"
       />
-      {/* Tiny bright spots */}
       <circle cx="94" cy="77" r="1.5" fill="#fb923c" className="em-g3" />
       <circle cx="110" cy="80" r="1" fill="#fbbf24" className="em-g1" />
       <circle cx="84" cy="82" r="1" fill="#f97316" className="em-g2" />
-      {/* Smoke wisps */}
       <ellipse
         cx="92"
         cy="68"
@@ -360,69 +354,7 @@ function LoadingView() {
   );
 }
 
-function PageShell({
-  children,
-  signedIn,
-  isAdmin,
-}: {
-  children: React.ReactNode;
-  signedIn: boolean;
-  isAdmin: boolean;
-}) {
-  return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b border-border py-5">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
-          <a
-            href="/"
-            className="font-display text-lg font-bold text-foreground transition-opacity hover:opacity-70"
-          >
-            ThoughtRelief
-          </a>
-          <div className="flex items-center gap-2">
-            {signedIn ? (
-              <>
-                {isAdmin && (
-                  <a
-                    href="/admin"
-                    className="rounded-lg px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    Admin
-                  </a>
-                )}
-                <SignOutButton />
-              </>
-            ) : (
-              <>
-                <a
-                  href="/auth/login"
-                  className="rounded-lg px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Sign in
-                </a>
-                <a
-                  href="/auth/signup"
-                  className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-                >
-                  Sign up
-                </a>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
-      <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-        {children}
-      </main>
-      <footer className="border-t border-border py-5 text-center">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">
-          Thought Relief is not a therapy or crisis service. If you&apos;re in
-          crisis, text or call 988.
-        </p>
-      </footer>
-    </div>
-  );
-}
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 const VAGUE_PATTERNS = new Set([
   "help",
@@ -489,11 +421,247 @@ type Microsteps = {
 };
 type MicrostepKey = "channelIntoWork" | "burnItOff" | "resetToZero";
 
+type SavedPlan = {
+  id: string;
+  title: string;
+  chosen_key: string;
+  chosen_step: string;
+  steps: string[];
+  created_at: string;
+};
+
+const SIDEBAR_WIDTH = "280px";
+const SIDEBAR_TRANSITION = "0.28s cubic-bezier(0.4, 0, 0.2, 1)";
+
 const CARDS: { key: MicrostepKey; label: string; icon: string }[] = [
   { key: "channelIntoWork", label: "Channel into Work", icon: "📚" },
   { key: "burnItOff", label: "Burn it Off", icon: "🚶" },
   { key: "resetToZero", label: "Reset to Zero", icon: "🌬️" },
 ];
+
+const CARD_LABEL = Object.fromEntries(CARDS.map((c) => [c.key, c.label]));
+
+const ANON_STORAGE_KEY = "thoughtrelief_anon_usage";
+
+function generatePlanTitle(chosenStep: string): string {
+  const first = chosenStep.split(/[.!?]/)[0].trim();
+  return first.length > 47 ? `${first.slice(0, 44)}...` : first;
+}
+
+// ─── Saved Actions Sidebar ───────────────────────────────────────────────────
+
+function SavedActionsPanel({
+  plans,
+  loading,
+}: {
+  plans: SavedPlan[];
+  loading: boolean;
+}) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="shrink-0 border-b border-border px-5 py-4">
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+          Saved actions
+        </h2>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        {loading ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            Loading...
+          </p>
+        ) : plans.length === 0 ? (
+          <p className="py-10 text-center text-sm leading-relaxed text-muted-foreground">
+            No saved actions yet. Complete a reflection and save one to see it
+            here.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {plans.map((plan) => (
+              <div
+                key={plan.id}
+                className="rounded-xl border border-border bg-card"
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedId((id) => (id === plan.id ? null : plan.id))
+                  }
+                  className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {plan.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {CARD_LABEL[plan.chosen_key] ?? plan.chosen_key}
+                    </p>
+                  </div>
+                  <span className="mt-0.5 shrink-0 text-xs text-muted-foreground">
+                    {expandedId === plan.id ? "▲" : "▼"}
+                  </span>
+                </button>
+
+                {expandedId === plan.id && (
+                  <div className="border-t border-border px-4 py-4">
+                    <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+                      {plan.chosen_step}
+                    </p>
+                    <ol className="space-y-2.5">
+                      {plan.steps.map((step, i) => (
+                        // biome-ignore lint/suspicious/noArrayIndexKey: steps are ordered and stable
+                        <li key={i} className="flex gap-2.5">
+                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                            {i + 1}
+                          </span>
+                          <p className="text-xs leading-relaxed text-foreground">
+                            {step}
+                          </p>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Page Shell ───────────────────────────────────────────────────────────────
+
+function PageShell({
+  children,
+  signedIn,
+  isAdmin,
+  sidebar,
+  sidebarOpen,
+  onToggleSidebar,
+}: {
+  children: React.ReactNode;
+  signedIn: boolean;
+  isAdmin: boolean;
+  sidebar?: React.ReactNode;
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
+}) {
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="border-b border-border py-5">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
+          <a
+            href="/"
+            className="font-display text-lg font-bold text-foreground transition-opacity hover:opacity-70"
+          >
+            ThoughtRelief
+          </a>
+          <div className="flex items-center gap-2">
+            {signedIn ? (
+              <>
+                {isAdmin && (
+                  <a
+                    href="/admin"
+                    className="rounded-lg px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Admin
+                  </a>
+                )}
+                <SignOutButton />
+              </>
+            ) : (
+              <>
+                <a
+                  href="/auth/login"
+                  className="rounded-lg px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Sign in
+                </a>
+                <a
+                  href="/auth/signup"
+                  className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  Sign up
+                </a>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+      <div className="flex flex-1 overflow-hidden">
+        {sidebar && (
+          <aside
+            className="hidden shrink-0 border-r border-border xl:flex xl:flex-col"
+            style={{
+              width: sidebarOpen ? SIDEBAR_WIDTH : "0px",
+              overflow: "hidden",
+              transition: `width ${SIDEBAR_TRANSITION}`,
+            }}
+          >
+            <div style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}>
+              {sidebar}
+            </div>
+          </aside>
+        )}
+        <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+          {children}
+        </main>
+      </div>
+      {sidebar && onToggleSidebar && (
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+          className="fixed top-1/2 z-50 hidden -translate-y-1/2 items-center justify-center rounded-r-lg border border-l-0 border-border bg-background p-1.5 text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground xl:flex"
+          style={{
+            left: sidebarOpen ? SIDEBAR_WIDTH : "0px",
+            transition: `left ${SIDEBAR_TRANSITION}`,
+          }}
+        >
+          {sidebarOpen ? (
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <polyline points="10 4 6 8 10 12" />
+            </svg>
+          ) : (
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <polyline points="6 4 10 8 6 12" />
+            </svg>
+          )}
+        </button>
+      )}
+      <footer className="border-t border-border py-5 text-center">
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">
+          Thought Relief is not a therapy or crisis service. If you&apos;re in
+          crisis, text or call 988.
+        </p>
+      </footer>
+    </div>
+  );
+}
+
+// ─── View Components ──────────────────────────────────────────────────────────
 
 function MicrostepResults({
   microsteps,
@@ -590,7 +758,6 @@ function PlanView({
         Small steps. Right now.
       </p>
 
-      {/* Chosen microstep */}
       <div className="mb-5 w-full rounded-2xl border border-border bg-card px-6 py-4 text-left">
         <div className="mb-2 flex items-center gap-2">
           <span className="text-lg">{card.icon}</span>
@@ -601,7 +768,6 @@ function PlanView({
         <p className="text-sm leading-relaxed text-foreground">{chosenStep}</p>
       </div>
 
-      {/* Action plan steps */}
       {actionPlanLoading && (
         <div className="mb-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-6">
           {[0, 1, 2].map((i) => (
@@ -651,13 +817,33 @@ function DoneView({
   signedIn,
   onRegenerate,
   regenerateCount,
+  actionPlan,
+  chosenKey,
+  chosenStep,
+  onSave,
 }: {
   onReset: () => void;
   signedIn: boolean;
   onRegenerate: () => void;
   regenerateCount: number;
+  actionPlan: string[] | null;
+  chosenKey: MicrostepKey | null;
+  chosenStep: string | null;
+  onSave: () => Promise<void>;
 }) {
   const [feedback, setFeedback] = useState<"yes" | "no" | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const canSave = !!(actionPlan?.length && chosenKey && chosenStep);
+
+  async function handleSave() {
+    if (saving || saved) return;
+    setSaving(true);
+    await onSave();
+    setSaving(false);
+    setSaved(true);
+  }
 
   function handleNo() {
     if (regenerateCount >= 10) {
@@ -678,68 +864,96 @@ function DoneView({
         One small step chosen. That&apos;s enough.
       </p>
 
-      {/* Did this help? */}
-      <div className="mb-8 w-full rounded-2xl border border-border bg-card px-6 py-5">
-        {feedback === "yes" ? (
-          <p className="font-display text-lg font-bold text-foreground">
-            Glad it helped.
-          </p>
-        ) : feedback === "no" && regenerateCount >= 10 ? (
-          <p className="text-sm text-muted-foreground">
-            You&apos;ve reached the regeneration limit for this session.
-          </p>
-        ) : (
-          <>
-            <p className="mb-4 text-sm font-medium text-foreground">
-              Did this help?
-            </p>
-            <div className="flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => setFeedback("yes")}
-                className="rounded-full border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
-              >
-                👍 Yes
-              </button>
-              <button
-                type="button"
-                onClick={handleNo}
-                className="rounded-full border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
-              >
-                👎 Not really
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-
       {signedIn ? (
-        <button
-          type="button"
-          onClick={onReset}
-          className="rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90"
-        >
-          Start Over
-        </button>
-      ) : (
         <>
+          {/* Feedback + optional save */}
+          <div className="mb-8 w-full rounded-2xl border border-border bg-card px-6 py-5">
+            {feedback === null && (
+              <>
+                <p className="mb-4 text-sm font-medium text-foreground">
+                  Did this help?
+                </p>
+                <div className="flex justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFeedback("yes")}
+                    className="rounded-full border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+                  >
+                    👍 Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNo}
+                    className="rounded-full border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+                  >
+                    👎 Not really
+                  </button>
+                </div>
+              </>
+            )}
+
+            {feedback === "yes" && (
+              <div className="flex flex-col items-center gap-3">
+                <p className="font-display text-lg font-bold text-foreground">
+                  Glad it helped.
+                </p>
+                {canSave && !saved && (
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="mt-1 rounded-full border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
+                  >
+                    {saving ? "Saving..." : "Save this plan"}
+                  </button>
+                )}
+                {saved && (
+                  <p className="text-sm text-muted-foreground">
+                    Saved to your Saved actions.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={onReset}
+                  className="mt-2 rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  Start Over
+                </button>
+              </div>
+            )}
+
+            {feedback === "no" && regenerateCount >= 10 && (
+              <div className="flex flex-col items-center gap-3">
+                <p className="text-sm text-muted-foreground">
+                  You&apos;ve reached the regeneration limit for this session.
+                </p>
+                <button
+                  type="button"
+                  onClick={onReset}
+                  className="rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  Start Over
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        /* Unauthenticated: no feedback, just sign up + home */
+        <div className="flex w-full flex-col items-center gap-3">
           <a
             href="/auth/signup"
-            className="mb-3 inline-block rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90"
+            className="inline-block w-full max-w-xs rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90"
           >
             Sign Up Free
           </a>
-          <button
-            type="button"
-            onClick={onReset}
-            className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          <a
+            href="/"
+            className="inline-block rounded-full border border-border bg-background px-14 py-4 text-base font-semibold uppercase tracking-widest text-foreground transition-colors hover:border-primary hover:text-primary"
           >
-            Start over
-          </button>
-          <p className="mt-4 text-xs text-muted-foreground">
-            Close the tab when you&apos;re ready. No account, no trace.
-          </p>
-        </>
+            Return Home
+          </a>
+        </div>
       )}
     </div>
   );
@@ -990,6 +1204,8 @@ function SafetyView({
   );
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 type Phase =
   | "input"
   | "loading"
@@ -1011,36 +1227,50 @@ export default function StartPage() {
   const [chosenKey, setChosenKey] = useState<MicrostepKey | null>(null);
   const [isFallback, setIsFallback] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [userPrefs, setUserPrefs] = useState<UserPrefs>(null);
   const [userLoaded, setUserLoaded] = useState(false);
   const [serverLimitHit, setServerLimitHit] = useState(false);
   const [actionPlan, setActionPlan] = useState<string[] | null>(null);
   const [actionPlanLoading, setActionPlanLoading] = useState(false);
   const [regenerateCount, setRegenerateCount] = useState(0);
+  const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
+  const [savedPlansLoading, setSavedPlansLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const supabaseRef = React.useRef(createClient());
 
   useEffect(() => {
-    const supabase = createClient();
+    const supabase = supabaseRef.current;
     supabase.auth.getUser().then(async ({ data }) => {
       const email = data.user?.email ?? null;
+      const uid = data.user?.id ?? null;
       setUserEmail(email);
+      setUserId(uid);
       if (data.user) {
-        const { data: prefs } = await supabase
-          .from("user_preferences")
-          .select("support_style, response_tone")
-          .eq("user_id", data.user.id)
-          .single();
-        if (prefs) {
+        setSavedPlansLoading(true);
+        const [prefsResult, plansResult] = await Promise.all([
+          supabase
+            .from("user_preferences")
+            .select("support_style, response_tone")
+            .eq("user_id", data.user.id)
+            .single(),
+          supabase
+            .from("saved_plans")
+            .select("id, title, chosen_key, chosen_step, steps, created_at")
+            .order("created_at", { ascending: false }),
+        ]);
+        if (prefsResult.data) {
           setUserPrefs({
-            supportStyle: prefs.support_style,
-            responseTone: prefs.response_tone,
+            supportStyle: prefsResult.data.support_style,
+            responseTone: prefsResult.data.response_tone,
           });
         }
+        setSavedPlans((plansResult.data as SavedPlan[]) ?? []);
+        setSavedPlansLoading(false);
       }
       setUserLoaded(true);
     });
   }, []);
-
-  const ANON_STORAGE_KEY = "thoughtrelief_anon_usage";
 
   async function handleSubmit() {
     if (!text.trim()) return;
@@ -1050,7 +1280,6 @@ export default function StartPage() {
       return;
     }
 
-    // Enforce 1/day limit for confirmed anonymous users via localStorage
     if (userLoaded && !signedIn) {
       const today = new Date().toISOString().slice(0, 10);
       const stored = JSON.parse(localStorage.getItem(ANON_STORAGE_KEY) ?? "{}");
@@ -1098,7 +1327,6 @@ export default function StartPage() {
       } else if (data.microsteps) {
         setMicrosteps(data.microsteps);
         setIsFallback(false);
-        // Track anonymous usage in localStorage after a successful reflection
         if (!signedIn) {
           const today = new Date().toISOString().slice(0, 10);
           const stored = JSON.parse(
@@ -1191,6 +1419,27 @@ export default function StartPage() {
     setActionPlanLoading(false);
   }
 
+  async function handleSavePlan() {
+    if (!chosenKey || !microsteps || !actionPlan || !userId) return;
+    const supabase = supabaseRef.current;
+    const chosenStep = microsteps[chosenKey];
+    const title = generatePlanTitle(chosenStep);
+    const { data: inserted } = await supabase
+      .from("saved_plans")
+      .insert({
+        user_id: userId,
+        title,
+        chosen_key: chosenKey,
+        chosen_step: chosenStep,
+        steps: actionPlan,
+      })
+      .select("id, title, chosen_key, chosen_step, steps, created_at")
+      .single();
+    if (inserted) {
+      setSavedPlans((prev) => [inserted as SavedPlan, ...prev]);
+    }
+  }
+
   function goBack() {
     setServerLimitHit(false);
     setPhase("input");
@@ -1211,95 +1460,91 @@ export default function StartPage() {
   const signedIn = userEmail !== null;
   const isAdmin = userEmail === ADMIN_EMAIL;
 
-  if (phase === "loading" || phase === "action-loading") {
+  const savedActionsSidebar = signedIn ? (
+    <SavedActionsPanel plans={savedPlans} loading={savedPlansLoading} />
+  ) : undefined;
+
+  function wrap(content: React.ReactNode) {
     return (
-      <PageShell signedIn={signedIn} isAdmin={isAdmin}>
-        <LoadingView />
+      <PageShell
+        signedIn={signedIn}
+        isAdmin={isAdmin}
+        sidebar={savedActionsSidebar}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((o) => !o)}
+      >
+        {content}
       </PageShell>
     );
   }
 
+  if (phase === "loading" || phase === "action-loading") {
+    return wrap(<LoadingView />);
+  }
+
   if (phase === "limit") {
-    return (
-      <PageShell signedIn={signedIn} isAdmin={isAdmin}>
-        <LimitView signedIn={signedIn || serverLimitHit} onBack={goBack} />
-      </PageShell>
+    return wrap(
+      <LimitView signedIn={signedIn || serverLimitHit} onBack={goBack} />,
     );
   }
 
   if (phase === "busy") {
-    return (
-      <PageShell signedIn={signedIn} isAdmin={isAdmin}>
-        <BusyView onRetry={handleSubmit} onBack={goBack} />
-      </PageShell>
-    );
+    return wrap(<BusyView onRetry={handleSubmit} onBack={goBack} />);
   }
 
   if (phase === "vague") {
-    return (
-      <PageShell signedIn={signedIn} isAdmin={isAdmin}>
-        <VagueView onBack={goBack} />
-      </PageShell>
-    );
+    return wrap(<VagueView onBack={goBack} />);
   }
 
   if (phase === "safety") {
-    return (
-      <PageShell signedIn={signedIn} isAdmin={isAdmin}>
-        <SafetyView onBack={goBack} onGetSupport={() => setPhase("crisis")} />
-      </PageShell>
+    return wrap(
+      <SafetyView onBack={goBack} onGetSupport={() => setPhase("crisis")} />,
     );
   }
 
   if (phase === "results" && microsteps) {
-    return (
-      <PageShell signedIn={signedIn} isAdmin={isAdmin}>
-        <MicrostepResults
-          microsteps={microsteps}
-          onSelect={handleSelect}
-          isFallback={isFallback}
-        />
-      </PageShell>
+    return wrap(
+      <MicrostepResults
+        microsteps={microsteps}
+        onSelect={handleSelect}
+        isFallback={isFallback}
+      />,
     );
   }
 
   if (phase === "plan" && microsteps && chosenKey) {
-    return (
-      <PageShell signedIn={signedIn} isAdmin={isAdmin}>
-        <PlanView
-          chosenKey={chosenKey}
-          chosenStep={microsteps[chosenKey]}
-          actionPlan={actionPlan}
-          actionPlanLoading={actionPlanLoading}
-          onAdvance={() => setPhase("done")}
-        />
-      </PageShell>
+    return wrap(
+      <PlanView
+        chosenKey={chosenKey}
+        chosenStep={microsteps[chosenKey]}
+        actionPlan={actionPlan}
+        actionPlanLoading={actionPlanLoading}
+        onAdvance={() => setPhase("done")}
+      />,
     );
   }
 
   if (phase === "done") {
-    return (
-      <PageShell signedIn={signedIn} isAdmin={isAdmin}>
-        <DoneView
-          onReset={reset}
-          signedIn={signedIn}
-          onRegenerate={handleRegenerate}
-          regenerateCount={regenerateCount}
-        />
-      </PageShell>
+    return wrap(
+      <DoneView
+        onReset={reset}
+        signedIn={signedIn}
+        onRegenerate={handleRegenerate}
+        regenerateCount={regenerateCount}
+        actionPlan={actionPlan}
+        chosenKey={chosenKey}
+        chosenStep={chosenKey && microsteps ? microsteps[chosenKey] : null}
+        onSave={handleSavePlan}
+      />,
     );
   }
 
   if (phase === "crisis") {
-    return (
-      <PageShell signedIn={signedIn} isAdmin={isAdmin}>
-        <CrisisView onReset={reset} signedIn={signedIn} />
-      </PageShell>
-    );
+    return wrap(<CrisisView onReset={reset} signedIn={signedIn} />);
   }
 
-  return (
-    <PageShell signedIn={signedIn} isAdmin={isAdmin}>
+  return wrap(
+    <>
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -1352,6 +1597,6 @@ export default function StartPage() {
           </p>
         </div>
       </div>
-    </PageShell>
+    </>,
   );
 }
