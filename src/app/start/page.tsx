@@ -1424,7 +1424,7 @@ export default function StartPage() {
       body: JSON.stringify({ originalText: text, chosenStep, chosenKey }),
     });
     const first = chosenStep.split(/[.!?]/)[0].trim();
-    const fallback = first.length > 47 ? `${first.slice(0, 44)}...` : first;
+    const fallback = first.length > 20 ? `${first.slice(0, 17)}...` : first;
     const title = titleRes.ok
       ? ((await titleRes.json()) as { title: string }).title
       : fallback;

@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
 Format: "[Subject] → [Specific action]"
 Rules:
-- Under 50 characters total (strict)
+- Under 20 characters total (strict)
 - Subject: the specific thing causing stress (e.g. "Calc exam", "Bio essay", "Group project")
 - Action: the concrete coping move in 2–4 words (e.g. "5-min sprint", "walk it off", "box breathing")
 - No filler words, no quotes, no punctuation at the end
@@ -51,9 +51,9 @@ Rules:
     title = first.length > 47 ? `${first.slice(0, 44)}...` : first;
   }
 
-  // Enforce 50-char hard cap as a safety net
-  if (title.length > 50) {
-    title = `${title.slice(0, 47)}...`;
+  // Enforce 20-char hard cap as a safety net
+  if (title.length > 20) {
+    title = `${title.slice(0, 17)}...`;
   }
 
   return Response.json({ title });
