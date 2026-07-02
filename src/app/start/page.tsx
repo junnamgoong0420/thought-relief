@@ -1280,7 +1280,11 @@ export default function StartPage() {
           setServerLimitHit(true);
           setPhase("limit");
         } else {
-          setPhase("busy");
+          // AI provider is rate-limited — fall back to generalized
+          // suggestions instead of blocking the student with a busy screen.
+          setMicrosteps(FALLBACK_MICROSTEPS);
+          setIsFallback(true);
+          setPhase("results");
         }
         return;
       }
