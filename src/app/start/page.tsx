@@ -1207,6 +1207,7 @@ export default function StartPage() {
   const [userLoaded, setUserLoaded] = useState(false);
   const [serverLimitHit, setServerLimitHit] = useState(false);
   const [actionPlan, setActionPlan] = useState<string[] | null>(null);
+  const [actionPlanTitle, setActionPlanTitle] = useState<string | null>(null);
   const [actionPlanLoading, setActionPlanLoading] = useState(false);
   const [regenerateCount, setRegenerateCount] = useState(0);
   const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
@@ -1346,10 +1347,17 @@ export default function StartPage() {
     ],
   };
 
+  // Both the step-by-step plan and its save-ready title come back from the
+  // SAME /api/action-plan model call — no separate title request.
+  function fallbackTitle(key: MicrostepKey, ms: Microsteps): string {
+    const first = ms[key].split(/[.!?]/)[0].trim();
+    return first.length > 20 ? `${first.slice(0, 17)}...` : first;
+  }
+
   async function fetchActionPlan(
     key: MicrostepKey,
     ms: Microsteps,
-  ): Promise<string[]> {
+  ): Promise<{ steps: string[]; title: string }> {
     try {
       const res = await fetch("/api/action-plan", {
         method: "POST",
@@ -1365,22 +1373,28 @@ export default function StartPage() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.steps) && data.steps.length >= 3) {
-          return data.steps as string[];
+          const title =
+            typeof data.title === "string" && data.title.trim()
+              ? data.title.trim()
+              : fallbackTitle(key, ms);
+          return { steps: data.steps as string[], title };
         }
       }
     } catch {
       // non-fatal — fall through to fallback
     }
-    return FALLBACK_STEPS[key];
+    return { steps: FALLBACK_STEPS[key], title: fallbackTitle(key, ms) };
   }
 
   async function handleSelect(key: MicrostepKey) {
     if (!microsteps) return;
     setChosenKey(key);
     setActionPlan(null);
+    setActionPlanTitle(null);
     setPhase("action-loading");
-    const steps = await fetchActionPlan(key, microsteps);
+    const { steps, title } = await fetchActionPlan(key, microsteps);
     setActionPlan(steps);
+    setActionPlanTitle(title);
     setPhase("plan");
   }
 
@@ -1389,8 +1403,9 @@ export default function StartPage() {
     setRegenerateCount((c) => c + 1);
     setActionPlanLoading(true);
     setPhase("plan");
-    const steps = await fetchActionPlan(chosenKey, microsteps);
+    const { steps, title } = await fetchActionPlan(chosenKey, microsteps);
     setActionPlan(steps);
+    setActionPlanTitle(title);
     setActionPlanLoading(false);
   }
 
@@ -1398,16 +1413,7 @@ export default function StartPage() {
     if (!chosenKey || !microsteps || !actionPlan || !userId) return;
     const supabase = supabaseRef.current;
     const chosenStep = microsteps[chosenKey];
-    const titleRes = await fetch("/api/generate-title", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ originalText: text, chosenStep, chosenKey }),
-    });
-    const first = chosenStep.split(/[.!?]/)[0].trim();
-    const fallback = first.length > 20 ? `${first.slice(0, 17)}...` : first;
-    const title = titleRes.ok
-      ? ((await titleRes.json()) as { title: string }).title
-      : fallback;
+    const title = actionPlanTitle ?? fallbackTitle(chosenKey, microsteps);
     const { data: inserted } = await supabase
       .from("saved_plans")
       .insert({
@@ -1436,6 +1442,7 @@ export default function StartPage() {
     setIsFallback(false);
     setServerLimitHit(false);
     setActionPlan(null);
+    setActionPlanTitle(null);
     setActionPlanLoading(false);
     setRegenerateCount(0);
     setPhase("input");

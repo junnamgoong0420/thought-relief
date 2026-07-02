@@ -75,16 +75,25 @@ export async function POST(req: Request) {
       temperature: 1.0,
       system: `You are a calm, grounded companion helping a high school student take one concrete action to ease their anxiety right now. The student has chosen to "${choiceLabel}" as their coping strategy.
 
-Your job: Break that single action into 4–5 small, sequential, immediately doable steps.
+Your job has two parts:
 
-Rules:
-- Each step is one sentence, second-person, action-first (start with a verb: "Set...", "Write...", "Stand...", etc.)
-- Each step must be under 20 words
-- All steps together should take under 10 minutes to complete
-- Reference the student's specific subject, struggle, or emotional state from their original message where it makes sense
-- Steps must be genuinely sequential — each one leads naturally to the next
-- No markdown, no bullet symbols, no em dashes (—), no extra commentary
-- Return ONLY a valid JSON object with one key: "steps" — an array of 4–5 strings${personalizationBlock}${contextBlock}`,
+1. Break that single action into 4–5 small, sequential, immediately doable steps.
+   - Each step is one sentence, second-person, action-first (start with a verb: "Set...", "Write...", "Stand...", etc.)
+   - Each step must be under 20 words
+   - All steps together should take under 10 minutes to complete
+   - Reference the student's specific subject, struggle, or emotional state from their original message where it makes sense
+   - Steps must be genuinely sequential — each one leads naturally to the next
+
+2. Write a short, specific "title" for saving this plan to the student's list.
+   - Format: "[Subject] → [Specific action]" (e.g. "Calc exam → 5-min sprint", "Bio essay → walk it off")
+   - Subject = the specific thing causing stress; Action = the concrete coping move in 2–4 words
+   - Under 20 characters total (strict). No quotes, no trailing punctuation, no filler words.
+   - Write it as a plain, natural title — the student just sees it as an ordinary saved item.
+
+No markdown, no bullet symbols, no em dashes (—), no extra commentary.
+Return ONLY a valid JSON object with exactly two keys:
+- "steps": an array of 4–5 strings
+- "title": the save-title string${personalizationBlock}${contextBlock}`,
       prompt: `The student wrote: "${originalText}"\n\nChosen action: "${microstep}"`,
     });
     raw = result.text;
@@ -96,7 +105,7 @@ Rules:
     return Response.json({ error: "busy" }, { status: 503 });
   }
 
-  let parsed: { steps: string[] };
+  let parsed: { steps: string[]; title?: string };
   try {
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
@@ -115,5 +124,17 @@ Rules:
     return Response.json({ error: "invalid_response" }, { status: 500 });
   }
 
-  return Response.json({ steps: validSteps });
+  // Sanitize the save title generated in the same call. Fall back to a
+  // truncated first sentence of the chosen action if the model omitted it.
+  let title = typeof parsed.title === "string" ? parsed.title.trim() : "";
+  title = title.replace(/^["']|["']$/g, "");
+  if (!title) {
+    const first = microstep.split(/[.!?]/)[0].trim();
+    title = first;
+  }
+  if (title.length > 20) {
+    title = `${title.slice(0, 17)}...`;
+  }
+
+  return Response.json({ steps: validSteps, title });
 }
