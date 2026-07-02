@@ -8,9 +8,10 @@ import { createClient } from "~/lib/supabase/server";
 // Context tags the AI infers to tailor responses; not stored in DB
 type ContextTag = "test_anxiety" | "interpersonal" | "overthinking" | "general";
 
-// Fallback-only safety net: used solely if the AI crisis classifier call
-// itself fails (network/provider error). The AI's judgment is the primary
-// decision-maker — see detectCrisisWithAI below.
+// Instant, zero-cost safety net for explicit crisis language. This short-
+// circuits BEFORE the model call (and before rate limiting) so an obvious
+// crisis is never gated by quota. Subtler / contextual cases are judged by
+// the AI as part of the main analysis call (see the "crisis" output field).
 const CRISIS_FALLBACK_KEYWORDS = [
   "kill myself",
   "killing myself",
@@ -40,27 +41,6 @@ const gateway = createOpenAI({
   baseURL: "https://ai-gateway.vercel.sh/v1",
   apiKey: env.AI_GATEWAY_API_KEY,
 });
-
-// Asks the model to judge, in context, whether the message shows real signs
-// of danger, self-harm, or suicidal ideation — rather than matching fixed
-// phrases. Errs toward caution on genuine ambiguity, but should not flag
-// ordinary stress, frustration, or hyperbole ("this test is going to kill me").
-async function detectCrisisWithAI(text: string): Promise<boolean> {
-  const result = await generateText({
-    model: gateway("openai/gpt-4.1-nano"),
-    temperature: 0,
-    system: `You are a safety classifier for a mental-wellness app used by high school students. Read the student's message and decide whether it shows a genuine sign of danger: suicidal thoughts, self-harm, wanting to die or disappear, passive ideation (e.g. "don't want to be here anymore", "what's the point of anything"), or being in immediate physical danger.
-
-Read for meaning and context, not just alarming words. Ordinary academic stress, frustration, or figures of speech ("this test is going to kill me", "I could just die of embarrassment") are NOT a crisis. When a message is genuinely ambiguous about risk to the student's safety, err on the side of caution and classify it as a crisis.
-
-Return ONLY a valid JSON object: {"crisis": true} or {"crisis": false}. No other text.`,
-    prompt: `Student message: "${text}"`,
-  });
-
-  const match = result.text.match(/\{[\s\S]*\}/);
-  const parsed = JSON.parse(match ? match[0] : result.text);
-  return parsed?.crisis === true;
-}
 
 const SUPPORT_STYLE_HINTS: Record<string, string> = {
   practical:
@@ -92,16 +72,9 @@ export async function POST(req: Request) {
     return Response.json({ error: "No text provided" }, { status: 400 });
   }
 
-  try {
-    if (await detectCrisisWithAI(text)) {
-      return Response.json({ crisis: true });
-    }
-  } catch {
-    // AI classifier failed (network/provider error) — fall back to the
-    // keyword safety net rather than letting a possible crisis through.
-    if (detectCrisisByKeyword(text)) {
-      return Response.json({ crisis: true });
-    }
+  // Fast path: explicit crisis language short-circuits before any model call.
+  if (detectCrisisByKeyword(text)) {
+    return Response.json({ crisis: true });
   }
 
   // Rate limiting: authenticated users get 7 reflections per calendar week (Mon–Sun UTC)
@@ -202,6 +175,8 @@ export async function POST(req: Request) {
 
 Before writing anything, silently work through this analysis. Never show it, never label it, never mention "step 1/2/3" or "analysis" in your output — only the final JSON should appear.
 
+SAFETY CHECK FIRST (most important): Judge, in context, whether the message shows a genuine sign of danger — suicidal thoughts, self-harm, wanting to die or disappear, passive ideation (e.g. "don't want to be here anymore", "what's the point of anything"), or immediate physical danger. Read for meaning, not just alarming words: ordinary academic stress, frustration, or figures of speech ("this test is going to kill me", "I could die of embarrassment") are NOT a crisis. If genuinely ambiguous about the student's safety, err toward treating it as a crisis. If you judge it a crisis, set "crisis" to true and DO NOT bother crafting a good fact/fear or steps (a brief placeholder in those fields is fine — the app will show crisis resources instead). Otherwise set "crisis" to false and complete the full reflection below.
+
 Silent analysis (internal only):
 - Reread the student's message closely and identify every distinct claim inside it.
 - Sort those claims into two buckets:
@@ -228,7 +203,8 @@ CRITICAL: make every suggestion feel written specifically for THIS student:
 - "resetToZero" should feel like a direct response to their specific emotional state, not a generic breathing exercise unless it truly fits.
 - Vary your language and suggestions. Never repeat phrasing from the student's own message back to them as if it were advice.
 
-Return ONLY a valid JSON object with exactly these six keys:
+Return ONLY a valid JSON object with exactly these seven keys:
+- "crisis": boolean — true only if the safety check above flagged a genuine sign of danger, otherwise false
 - "contextTag": one of "test_anxiety" | "interpersonal" | "overthinking" | "general"
 - "fact": 1–2 sentences of what is objectively true right now, including any real stakes — no predictions about outcomes
 - "fear": 1–2 sentences naming the specific prediction, judgment, or story the mind is adding on top of the fact, in plain conversational language (not clinical labels, not a generic "you're assuming" template every time)
@@ -249,6 +225,7 @@ Each microstep value must be a single sentence, second-person ("Try...", "Take..
   }
 
   let microsteps: {
+    crisis?: boolean;
     contextTag: ContextTag;
     fact: string;
     fear: string;
@@ -276,6 +253,12 @@ Each microstep value must be a single sentence, second-person ("Try...", "Take..
       return Response.json({ error: "safety" });
     }
     return Response.json({ fallback: true });
+  }
+
+  // The model judges crisis as part of this single call (folded in from what
+  // used to be a separate classifier request). Honor it before anything else.
+  if (microsteps.crisis === true) {
+    return Response.json({ crisis: true });
   }
 
   const steps = [
