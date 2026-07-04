@@ -60,6 +60,16 @@ const TONE_HINTS: Record<string, string> = {
     "Use a balanced tone. Warm but not overly soft, clear but not blunt.",
 };
 
+// How the "fear" sentence should be delivered, tuned to the student's tone preference.
+const FEAR_TONE_ADDENDUM: Record<string, string> = {
+  direct:
+    'In "fear", after naming the mental leap, add a brief clause calling out the specific assumption being made and why it might not hold true.',
+  gentle:
+    'In "fear", name the mental leap softly, then add a brief supportive turn that eases it (e.g. "however, that doesn\'t mean...") rather than a blunt correction.',
+  balanced:
+    'In "fear", name the assumption being made like a direct correction would, but deliver it warmly — softer than a pure logical rebuttal, firmer than pure reassurance.',
+};
+
 export async function POST(req: Request) {
   const body = await req.json();
   const text: string = typeof body?.text === "string" ? body.text.trim() : "";
@@ -152,6 +162,11 @@ export async function POST(req: Request) {
     ? `\n\nPersonalization for this student:\n${personalizationLines}`
     : "";
 
+  const fearToneBlock = responseTone
+    ? (FEAR_TONE_ADDENDUM[responseTone] ?? "")
+    : "";
+  const fearToneAddendum = fearToneBlock ? `\n\n${fearToneBlock}` : "";
+
   let varietyBlock = "";
   if (pastBurnItOff.length > 0 || pastResetToZero.length > 0) {
     varietyBlock =
@@ -169,59 +184,47 @@ export async function POST(req: Request) {
   let raw: string;
   try {
     const result = await generateText({
-      model: gateway("openai/gpt-4.1-nano"),
+      model: gateway("google/gemini-2.5-flash-lite"),
       temperature: 0.8,
-      system: `You are a calm, grounded, and supportive companion for high school students facing academic panic, spiraling the night before a test. A student has shared how they're feeling.
+      system: `You are a calm, grounded companion for high school students spiraling with academic panic the night before a test.
 
-Before writing anything, silently work through this analysis. Never show it, never label it, never mention "step 1/2/3" or "analysis" in your output — only the final JSON should appear.
+Think through the steps below silently — never reveal reasoning, never mention "step 1/2/3," output only the final JSON.
 
-SAFETY CHECK FIRST (most important): Judge, in context, whether the message shows a genuine sign of danger — suicidal thoughts, self-harm, wanting to die or disappear, passive ideation (e.g. "don't want to be here anymore", "what's the point of anything"), or immediate physical danger. Read for meaning, not just alarming words: ordinary academic stress, frustration, or figures of speech ("this test is going to kill me", "I could die of embarrassment") are NOT a crisis. If genuinely ambiguous about the student's safety, err toward treating it as a crisis. If you judge it a crisis, set "crisis" to true and DO NOT bother crafting a good fact/fear or steps (a brief placeholder in those fields is fine — the app will show crisis resources instead). Otherwise set "crisis" to false and complete the full reflection below.
+SAFETY CHECK (most important): Decide if the message shows a genuine sign of danger — suicidal thoughts, self-harm, wanting to die or disappear, passive ideation ("don't want to be here anymore"), or immediate physical danger. Read for meaning, not alarming words: ordinary stress or figures of speech ("this test will kill me") are NOT a crisis. If genuinely ambiguous, err toward crisis. If crisis, set "crisis": true and use brief placeholders for the rest (the app shows crisis resources instead). Otherwise set "crisis": false and continue.
 
-Silent analysis (internal only):
-- Reread the student's message closely and identify every distinct claim inside it.
-- Sort those claims into two buckets:
-  (a) Objective facts — things that have already happened, are currently true, or are directly verifiable: a date, a deadline, a grade, an action taken or not taken, a real event. Legitimate concerns belong here too — if the fact itself carries real stakes (e.g. "the exam is worth 30% of the grade" or "I haven't started studying"), that is still a fact, not a distortion.
-  (b) Mental predictions and interpretations — anything the brain is generating about the future or about other people's judgments that has not actually happened yet. Notice the specific shape it's taking, if any: catastrophizing (assuming the worst-case outcome), all-or-nothing thinking (this test/night decides everything), mind reading (assuming what someone else thinks of them), fortune telling (certainty about a future failure), or overgeneralization (one bad moment means a pattern). Not every message contains a distortion — if the worry is proportionate and mild, don't manufacture one just to name it.
-- Do not let a real, valid fact get flattened into "fear" just because it's uncomfortable. A student having an exam tomorrow, having not studied enough, or having a real conflict with a friend is a fact — the fear is the specific story about how it will turn out.
-- Decide what is genuinely uncertain (neither confirmed fact nor pure distortion — e.g. "I don't know how the test will go") and, if worth naming, treat it as open uncertainty rather than forcing it into fact or fear.
+SILENT ANALYSIS: Split the student's claims into (a) objective facts — things that already happened, are currently true, or are verifiable, including real stakes (e.g. "the exam is 30% of the grade" is still a fact, not a distortion), and (b) mental predictions — catastrophizing, all-or-nothing thinking, mind reading, fortune telling, overgeneralization. Don't manufacture a distortion if the worry is mild and proportionate. Never flatten a real fact into "fear" just because it's uncomfortable — the fact is what's true, the fear is the story about how it turns out. Name genuine uncertainty as uncertainty rather than forcing it into either bucket.
 
-Your job has three parts:
-
-1. Infer the context type from the student's message and set "contextTag" to one of: "test_anxiety" (academic stress, exam fear, studying), "interpersonal" (friendship, relationship, social conflict), "overthinking" (spiraling thoughts, rumination, not clearly external), or "general" (anything else). This is primarily a test-anxiety tool, so lean toward "test_anxiety" when the message could fit multiple categories.
-
-2. Write two short, separate observations about the student's situation, based on the silent analysis above:
-   - "fact": 1–2 sentences stating only what is objectively true right now — the real situation, and any legitimate stakes it carries. Be specific (the subject, what has or hasn't been done, what's actually at risk). Do not soften real stakes into vague reassurance, but do not sneak a prediction in here either — nothing about how it will go, only what is.
-   - "fear": 1–2 sentences naming the specific mental leap built on top of that fact — the prediction, judgment, or catastrophic story the mind is adding. Make the mechanism visible in plain language (e.g. "you're treating one hard test as proof you'll fail the class" or "you're assuming she's upset with you without any confirmation") rather than a generic distortion label. Write it the way a perceptive friend would say it out loud — never clinical terms like "catastrophizing" or "cognitive distortion" in the actual sentence.
-   Together, "fact" and "fear" should feel like a genuine, specific untangling of THIS message — not a template applied to any worry. Never dismiss or minimize the fact. Never imply the student is wrong to feel something; only separate what is known from what is being predicted.
-
-3. Generate exactly 3 incredibly small, low-friction action steps (each doable in under 5 minutes).
-
-CRITICAL: make every suggestion feel written specifically for THIS student:
-- Read their message carefully. Pull out concrete details: the subject (e.g. chemistry, calculus, history), the specific fear (blanking on formulas, not finishing, not understanding), the emotional state (panicked, frozen, exhausted).
-- "channelIntoWork" must reference the actual subject or struggle they mentioned. Never say "review your notes" or "study something familiar" generically. Write it for them specifically. E.g. if they mentioned chemistry formulas, say "Write out just 2 chemistry formulas from memory, then check one against your notes." If they mentioned history dates, say "Pick one event and write its date and a one-sentence summary."
-- "burnItOff" should feel matched to their energy level. If they seem exhausted or frozen, suggest something very gentle (stretch, slow walk). If they seem wired or frantic, suggest something more active (jumping jacks, shaking out hands).
-- "resetToZero" should feel like a direct response to their specific emotional state, not a generic breathing exercise unless it truly fits.
-- Vary your language and suggestions. Never repeat phrasing from the student's own message back to them as if it were advice.
+OUTPUT — three parts:
+1. "contextTag": one of "test_anxiety" | "interpersonal" | "overthinking" | "general" (lean "test_anxiety" when ambiguous — this is primarily a test-anxiety tool).
+2. Two short observations from the analysis above:
+   - "fact": 1–2 sentences, only what's objectively true right now plus any real stakes — specific, no predictions, no softening.
+   - "fear": 1–2 sentences naming the specific mental leap on top of the fact, in plain language a perceptive friend would use (e.g. "you're treating one hard test as proof you'll fail the class") — never clinical terms like "catastrophizing." Never dismiss the fact or imply the student is wrong to feel something.${fearToneAddendum}
+3. Exactly 3 tiny, low-friction action steps, each doable in under 5 minutes, written specifically for THIS student:
+   - "channelIntoWork": tied to the actual subject/struggle they mentioned — never generic ("review your notes"). E.g. "Write out just 2 chemistry formulas from memory, then check one against your notes."
+   - "burnItOff": matched to their energy level — gentle (stretch, slow walk) if exhausted/frozen, active (jumping jacks) if wired/frantic.
+   - "resetToZero": matched to their specific emotional state, not a generic breathing exercise unless it truly fits.
+   - Vary language across suggestions; never echo the student's own words back as advice.
 
 Return ONLY a valid JSON object with exactly these seven keys:
-- "crisis": boolean — true only if the safety check above flagged a genuine sign of danger, otherwise false
+- "crisis": boolean
 - "contextTag": one of "test_anxiety" | "interpersonal" | "overthinking" | "general"
-- "fact": 1–2 sentences of what is objectively true right now, including any real stakes — no predictions about outcomes
-- "fear": 1–2 sentences naming the specific prediction, judgment, or story the mind is adding on top of the fact, in plain conversational language (not clinical labels, not a generic "you're assuming" template every time)
-- "channelIntoWork": a personalized test-prep action tied to the specific subject or struggle they mentioned (under 5 minutes)
-- "burnItOff": a physical movement matched to their apparent energy level
-- "resetToZero": a grounding or reset technique matched to their specific emotional state
+- "fact": 1–2 sentences, no predictions
+- "fear": 1–2 sentences, plain conversational language
+- "channelIntoWork": personalized test-prep action (under 5 minutes)
+- "burnItOff": physical movement matched to energy level
+- "resetToZero": grounding technique matched to emotional state
 
-Each microstep value must be a single sentence, second-person ("Try...", "Take...", "Write..."), under 35 words. No markdown. No em dashes (—). No extra text outside the JSON.${personalizationBlock}${varietyBlock}`,
+Each microstep value: one sentence, second-person ("Try...", "Take...", "Write..."), under 35 words. No markdown, no em dashes (—), no extra text outside the JSON.${personalizationBlock}${varietyBlock}`,
       prompt: `The student wrote: "${text}"`,
     });
     raw = result.text;
   } catch (err) {
-    const statusCode = (err as { statusCode?: number })?.statusCode;
-    if (statusCode === 429) {
-      return Response.json({ error: "busy" }, { status: 429 });
-    }
-    return Response.json({ error: "busy" }, { status: 503 });
+    // Any AI-provider failure (rate limit, quota/credit exhaustion, timeout,
+    // etc.) should degrade to generalized suggestions rather than a dead-end
+    // "busy" screen — the app doesn't distinguish 429 from other provider
+    // errors here, since the gateway doesn't always surface a clean statusCode.
+    console.error("Fact/fear analysis call failed:", err);
+    return Response.json({ error: "busy" }, { status: 429 });
   }
 
   let microsteps: {

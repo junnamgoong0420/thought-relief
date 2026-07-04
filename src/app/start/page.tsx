@@ -713,12 +713,14 @@ function PlanView({
   chosenStep,
   actionPlan,
   actionPlanLoading,
+  actionPlanIsFallback,
   onAdvance,
 }: {
   chosenKey: MicrostepKey;
   chosenStep: string;
   actionPlan: string[] | null;
   actionPlanLoading: boolean;
+  actionPlanIsFallback: boolean;
   onAdvance: () => void;
 }) {
   const card = CARDS.find((c) => c.key === chosenKey) ?? CARDS[0];
@@ -730,7 +732,9 @@ function PlanView({
         Here&apos;s your plan.
       </h2>
       <p className="mb-6 text-sm text-muted-foreground">
-        Small steps. Right now.
+        {actionPlanIsFallback && !actionPlanLoading
+          ? "I couldn't personalize this one, so here are standard steps."
+          : "Small steps. Right now."}
       </p>
 
       <div className="mb-5 w-full rounded-2xl border border-border bg-card px-6 py-4 text-left">
@@ -1208,6 +1212,7 @@ export default function StartPage() {
   const [serverLimitHit, setServerLimitHit] = useState(false);
   const [actionPlan, setActionPlan] = useState<string[] | null>(null);
   const [actionPlanTitle, setActionPlanTitle] = useState<string | null>(null);
+  const [actionPlanIsFallback, setActionPlanIsFallback] = useState(false);
   const [actionPlanLoading, setActionPlanLoading] = useState(false);
   const [regenerateCount, setRegenerateCount] = useState(0);
   const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
@@ -1361,7 +1366,7 @@ export default function StartPage() {
   async function fetchActionPlan(
     key: MicrostepKey,
     ms: Microsteps,
-  ): Promise<{ steps: string[]; title: string }> {
+  ): Promise<{ steps: string[]; title: string; isFallback: boolean }> {
     try {
       const res = await fetch("/api/action-plan", {
         method: "POST",
@@ -1381,13 +1386,17 @@ export default function StartPage() {
             typeof data.title === "string" && data.title.trim()
               ? data.title.trim()
               : fallbackTitle(key, ms);
-          return { steps: data.steps as string[], title };
+          return { steps: data.steps as string[], title, isFallback: false };
         }
       }
     } catch {
       // non-fatal — fall through to fallback
     }
-    return { steps: FALLBACK_STEPS[key], title: fallbackTitle(key, ms) };
+    return {
+      steps: FALLBACK_STEPS[key],
+      title: fallbackTitle(key, ms),
+      isFallback: true,
+    };
   }
 
   async function handleSelect(key: MicrostepKey) {
@@ -1395,10 +1404,16 @@ export default function StartPage() {
     setChosenKey(key);
     setActionPlan(null);
     setActionPlanTitle(null);
+    setActionPlanIsFallback(false);
     setPhase("action-loading");
-    const { steps, title } = await fetchActionPlan(key, microsteps);
+    const {
+      steps,
+      title,
+      isFallback: fallback,
+    } = await fetchActionPlan(key, microsteps);
     setActionPlan(steps);
     setActionPlanTitle(title);
+    setActionPlanIsFallback(fallback);
     setPhase("plan");
   }
 
@@ -1407,9 +1422,14 @@ export default function StartPage() {
     setRegenerateCount((c) => c + 1);
     setActionPlanLoading(true);
     setPhase("plan");
-    const { steps, title } = await fetchActionPlan(chosenKey, microsteps);
+    const {
+      steps,
+      title,
+      isFallback: fallback,
+    } = await fetchActionPlan(chosenKey, microsteps);
     setActionPlan(steps);
     setActionPlanTitle(title);
+    setActionPlanIsFallback(fallback);
     setActionPlanLoading(false);
   }
 
@@ -1447,6 +1467,7 @@ export default function StartPage() {
     setServerLimitHit(false);
     setActionPlan(null);
     setActionPlanTitle(null);
+    setActionPlanIsFallback(false);
     setActionPlanLoading(false);
     setRegenerateCount(0);
     setPhase("input");
@@ -1514,6 +1535,7 @@ export default function StartPage() {
         chosenStep={microsteps[chosenKey]}
         actionPlan={actionPlan}
         actionPlanLoading={actionPlanLoading}
+        actionPlanIsFallback={actionPlanIsFallback}
         onAdvance={() => setPhase("done")}
       />,
     );
