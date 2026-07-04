@@ -71,24 +71,13 @@ export async function POST(req: Request) {
   let raw: string;
   try {
     const result = await generateText({
-      model: gateway("openai/gpt-4.1-nano"),
+      model: gateway("google/gemini-2.5-flash-lite"),
       temperature: 1.0,
-      system: `You are a calm, grounded companion helping a high school student take one concrete action to ease their anxiety right now. The student has chosen to "${choiceLabel}" as their coping strategy.
+      system: `You are a calm companion helping a high school student act on their chosen coping strategy: "${choiceLabel}".
 
-Your job has two parts:
-
-1. Break that single action into 4–5 small, sequential, immediately doable steps.
-   - Each step is one sentence, second-person, action-first (start with a verb: "Set...", "Write...", "Stand...", etc.)
-   - Each step must be under 20 words
-   - All steps together should take under 10 minutes to complete
-   - Reference the student's specific subject, struggle, or emotional state from their original message where it makes sense
-   - Steps must be genuinely sequential — each one leads naturally to the next
-
-2. Write a short, specific "title" for saving this plan to the student's list.
-   - Format: "[Subject] → [Specific action]" (e.g. "Calc exam → 5-min sprint", "Bio essay → walk it off")
-   - Subject = the specific thing causing stress; Action = the concrete coping move in 2–4 words
-   - Under 20 characters total (strict). No quotes, no trailing punctuation, no filler words.
-   - Write it as a plain, natural title — the student just sees it as an ordinary saved item.
+Two-part job:
+1. Break that action into 4–5 small, sequential, immediately doable steps: one sentence each, second-person, action-first (start with a verb), under 20 words, all steps together under 10 minutes, each leading naturally to the next. Reference the student's specific subject/struggle/emotional state from their message where it fits.
+2. Write a "title" for saving this plan: format "[Subject] → [Specific action]" (e.g. "Calc exam → 5-min sprint"). Under 20 characters total (strict), no quotes/trailing punctuation/filler — a plain, ordinary-looking title.
 
 No markdown, no bullet symbols, no em dashes (—), no extra commentary.
 Return ONLY a valid JSON object with exactly two keys:
@@ -98,11 +87,10 @@ Return ONLY a valid JSON object with exactly two keys:
     });
     raw = result.text;
   } catch (err) {
-    const statusCode = (err as { statusCode?: number })?.statusCode;
-    if (statusCode === 429) {
-      return Response.json({ error: "busy" }, { status: 429 });
-    }
-    return Response.json({ error: "busy" }, { status: 503 });
+    // Any AI-provider failure degrades to the standard fallback steps on the
+    // client rather than a dead-end error screen — see fetchActionPlan.
+    console.error("Action plan generation call failed:", err);
+    return Response.json({ error: "busy" }, { status: 429 });
   }
 
   let parsed: { steps: string[]; title?: string };
