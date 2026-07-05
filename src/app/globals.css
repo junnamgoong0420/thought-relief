@@ -53,11 +53,71 @@
   font-family: var(--font-display), Georgia, serif;
 }
 
+@utility glass-card {
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
+  background: color-mix(in oklch, var(--color-card) 55%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-primary) 20%, transparent);
+  border-radius: var(--radius-xl);
+}
+
+@utility btn-ghost-ember {
+  border: 1px solid color-mix(in oklch, var(--color-primary) 50%, transparent);
+  background: transparent;
+  color: var(--color-primary);
+}
+
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-fade-rise {
+  animation: fade-rise 0.5s ease both;
+}
+
+@keyframes ember-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.45;
+  }
+}
+
+@utility animate-ember-breathe {
+  animation: ember-breathe 4s ease-in-out infinite;
+}
+
 @layer base {
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat arbitrary component-level animation specificity */
+    animation-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must beat arbitrary component-level animation specificity */
+    animation-iteration-count: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must beat arbitrary component-level transition specificity */
+    transition-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must beat arbitrary component-level scroll-behavior specificity */
+    scroll-behavior: auto !important;
   }
 }

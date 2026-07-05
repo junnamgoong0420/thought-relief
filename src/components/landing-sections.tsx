@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { GlowOrb } from "~/components/glow-orb";
 import { cn } from "~/lib/utils";
 
 function useScrollReveal() {
@@ -258,38 +259,60 @@ export function LandingSections() {
     <>
       {/* Hero */}
       <section className="px-6 pb-24 pt-24 text-center">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          className="mx-auto mb-6 w-12 text-primary sm:w-14"
+        <div data-reveal className="relative mx-auto mb-6 w-fit">
+          <GlowOrb className="left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 animate-ember-breathe" />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="relative w-12 text-primary sm:w-14"
+          >
+            <path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z" />
+          </svg>
+        </div>
+        <div
+          data-reveal
+          data-delay="80"
+          className="mb-8 flex flex-wrap items-center justify-center gap-3"
         >
-          <path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z" />
-        </svg>
-        <span className="mb-8 inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-sm text-muted-foreground">
-          Free · No account needed
-        </span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-sm text-muted-foreground">
+            Free · No account needed
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-sm text-muted-foreground">
+            No memory, ever — nothing you type is stored
+          </span>
+        </div>
 
-        <h1 className="font-display mx-auto mb-6 max-w-5xl text-5xl font-bold leading-tight tracking-tight text-foreground md:text-6xl lg:text-7xl">
+        <h1
+          data-reveal
+          data-delay="160"
+          className="font-display mx-auto mb-6 max-w-5xl text-5xl font-bold leading-tight tracking-tight text-foreground md:text-6xl lg:text-7xl"
+        >
           Spiraling before your test?
           <br />
-          Let it out. Then let it go.
+          <span className="text-primary">Let it out. Then let it go.</span>
         </h1>
 
         <div className="mx-auto max-w-xl">
-          <p className="mb-10 text-lg text-muted-foreground">
+          <p
+            data-reveal
+            data-delay="240"
+            className="mb-10 text-lg text-muted-foreground"
+          >
             Thought Relief helps you dump what&apos;s in your head, see
             what&apos;s real vs. what&apos;s panic, and pick one tiny thing to
             do next, in under 3 minutes. What you share here stays here.
           </p>
 
           <a
+            data-reveal
+            data-delay="320"
             href="/start"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-12 py-4 text-lg font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-12 py-4 text-lg font-semibold text-primary-foreground transition-all hover:shadow-lg hover:shadow-primary/30 hover:opacity-90 active:scale-[0.98]"
           >
             Start
             <span aria-hidden>→</span>
@@ -305,7 +328,7 @@ export function LandingSections() {
       <section className="px-6 pb-24">
         <div
           data-reveal
-          className="mx-auto max-w-3xl rounded-2xl border border-border bg-card px-8 py-14 text-center"
+          className="glass-card mx-auto max-w-3xl px-8 py-14 text-center"
         >
           <p className="mb-4 text-sm uppercase tracking-widest text-muted-foreground">
             Why it works
@@ -332,7 +355,7 @@ export function LandingSections() {
               data-reveal
               data-delay={String(i * 90)}
               className={cn(
-                "rounded-xl border border-border bg-card p-7",
+                "rounded-xl border border-border bg-card p-7 transition-all duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/15",
                 isLastOdd &&
                   i === features.length - 1 &&
                   "sm:col-span-2 sm:mx-auto sm:w-[calc(50%-0.625rem)]",
@@ -356,12 +379,12 @@ export function LandingSections() {
       <section className="px-6 pb-24">
         <div
           data-reveal
-          className="mx-auto max-w-3xl rounded-2xl border border-border bg-card px-8 py-16 text-center"
+          className="glass-card mx-auto max-w-3xl px-8 py-16 text-center"
         >
           <p className="mb-4 text-sm uppercase tracking-widest text-muted-foreground">
             Built different
           </p>
-          <h2 className="font-display mb-6 text-4xl font-bold leading-tight text-foreground md:text-5xl lg:text-6xl">
+          <h2 className="font-display mb-6 text-4xl font-bold leading-tight text-primary md:text-5xl lg:text-6xl">
             Gone when you&apos;re done.
           </h2>
           <p className="mx-auto max-w-lg text-lg text-muted-foreground">

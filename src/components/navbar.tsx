@@ -16,9 +16,9 @@ export async function Navbar() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
         <Link
           href="/"
-          className="text-xl font-semibold tracking-tight text-foreground"
+          className="font-display text-xl font-bold tracking-tight text-foreground"
         >
-          ThoughtRelief
+          Thought<span className="text-primary">Relief</span>
         </Link>
 
         <div className="flex items-center gap-2">

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { GlowOrb } from "~/components/glow-orb";
 import { SignOutButton } from "~/components/sign-out-button";
 import { ADMIN_EMAIL } from "~/lib/constants";
 import { createClient } from "~/lib/supabase/client";
@@ -476,7 +477,7 @@ function SavedActionsPanel({
               <a
                 key={plan.id}
                 href={`/saved-plan/${plan.id}`}
-                className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 hover:bg-accent"
+                className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 transition-colors hover:border-primary/40 hover:bg-accent"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">
@@ -526,7 +527,8 @@ function PageShell({
   onToggleSidebar?: () => void;
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col">
+      <GlowOrb className="-z-10 fixed inset-x-0 top-0 h-[640px] w-full rounded-none opacity-[0.22] blur-3xl" />
       <header className="border-b border-border py-5">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
           <a
@@ -665,7 +667,7 @@ function MicrostepResults({
 
       {!isFallback && (
         <div className="mb-6 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-card px-5 py-4">
+          <div className="glass-card px-5 py-4">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               What&apos;s actually true
             </p>
@@ -673,7 +675,7 @@ function MicrostepResults({
               {microsteps.fact}
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card px-5 py-4">
+          <div className="glass-card px-5 py-4">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               What fear looks like
             </p>
@@ -690,7 +692,7 @@ function MicrostepResults({
             key={key}
             type="button"
             onClick={() => onSelect(key)}
-            className="group flex flex-col rounded-2xl border-2 border-border bg-card p-5 text-left transition-all hover:border-primary hover:shadow-md active:scale-[0.98]"
+            className="group glass-card flex flex-col p-5 text-left shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)] transition-all hover:-translate-y-1 hover:border-primary hover:shadow-xl hover:shadow-primary/25 active:scale-[0.98]"
           >
             <div className="mb-3 flex items-center gap-2">
               <span className="text-xl">{icon}</span>
@@ -737,7 +739,7 @@ function PlanView({
           : "Small steps. Right now."}
       </p>
 
-      <div className="mb-5 w-full rounded-2xl border border-border bg-card px-6 py-4 text-left">
+      <div className="glass-card mb-5 w-full px-6 py-4 text-left">
         <div className="mb-2 flex items-center gap-2">
           <span className="text-lg">{card.icon}</span>
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -783,7 +785,7 @@ function PlanView({
       <button
         type="button"
         onClick={onAdvance}
-        className="rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90"
+        className="rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-all hover:opacity-90 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98]"
       >
         Done
       </button>
@@ -846,7 +848,7 @@ function DoneView({
       {signedIn ? (
         <>
           {/* Feedback + optional save */}
-          <div className="mb-8 w-full rounded-2xl border border-border bg-card px-6 py-5">
+          <div className="glass-card mb-8 w-full px-6 py-5">
             {feedback === null && (
               <>
                 <p className="mb-4 text-sm font-medium text-foreground">
@@ -894,7 +896,7 @@ function DoneView({
                 <button
                   type="button"
                   onClick={onReset}
-                  className="mt-2 rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90"
+                  className="mt-2 rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-all hover:opacity-90 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98]"
                 >
                   Start Over
                 </button>
@@ -909,7 +911,7 @@ function DoneView({
                 <button
                   type="button"
                   onClick={onReset}
-                  className="rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90"
+                  className="rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-all hover:opacity-90 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98]"
                 >
                   Start Over
                 </button>
@@ -922,7 +924,7 @@ function DoneView({
         <div className="flex w-full flex-col items-center gap-3">
           <a
             href="/auth/signup"
-            className="inline-block w-full max-w-xs rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90"
+            className="inline-block w-full max-w-xs rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-all hover:opacity-90 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98]"
           >
             Sign Up Free
           </a>
@@ -1489,7 +1491,12 @@ export default function StartPage() {
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen((o) => !o)}
       >
-        {content}
+        <div
+          key={phase}
+          className="flex w-full flex-col items-center animate-fade-rise"
+        >
+          {content}
+        </div>
       </PageShell>
     );
   }
@@ -1562,18 +1569,21 @@ export default function StartPage() {
 
   return wrap(
     <>
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-        className="mx-auto mb-6 w-10 text-primary sm:w-12"
-      >
-        <path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z" />
-      </svg>
+      <div className="relative mx-auto mb-6 w-fit">
+        <GlowOrb className="left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 animate-ember-breathe" />
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className="relative w-10 text-primary sm:w-12"
+        >
+          <path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z" />
+        </svg>
+      </div>
 
       <div className="w-full max-w-2xl text-center">
         <h1 className="font-display mb-3 text-4xl font-bold text-foreground md:text-5xl">
@@ -1592,7 +1602,7 @@ export default function StartPage() {
           }
           maxLength={1000}
           rows={8}
-          className="mb-6 w-full resize-none rounded-2xl border border-border bg-card px-6 py-5 text-left text-base text-foreground placeholder:italic placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none"
+          className="glass-card mb-6 w-full resize-none px-6 py-5 text-left text-base text-foreground placeholder:italic placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
         />
         {text.length >= 1000 && (
           <p className="-mt-4 mb-4 text-right text-xs text-muted-foreground">
@@ -1605,7 +1615,7 @@ export default function StartPage() {
             type="button"
             onClick={handleSubmit}
             disabled={!text.trim()}
-            className="rounded-full bg-primary px-16 py-4 text-lg font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-primary px-16 py-4 text-lg font-semibold text-primary-foreground transition-all hover:opacity-90 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:shadow-none"
           >
             Let it out
           </button>
