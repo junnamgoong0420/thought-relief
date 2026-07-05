@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { GlowOrb } from "~/components/glow-orb";
 import { GoogleButton } from "~/components/google-button";
 import { createClient } from "~/lib/supabase/client";
 
@@ -36,7 +37,8 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col">
+      <GlowOrb className="-z-10 fixed inset-x-0 top-0 h-[640px] w-full rounded-none opacity-[0.22] blur-3xl" />
       <header className="border-b border-border py-5 text-center">
         <Link
           href="/"
@@ -48,7 +50,7 @@ function LoginForm() {
 
       <main className="flex flex-1 items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
-          <h1 className="mb-2 text-center text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="font-display mb-2 text-center text-3xl font-bold tracking-tight text-foreground">
             Sign in
           </h1>
           <p className="mb-8 text-center text-sm text-muted-foreground">
@@ -90,7 +92,7 @@ function LoginForm() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none"
+                className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
                 placeholder="you@example.com"
               />
             </div>
@@ -109,7 +111,7 @@ function LoginForm() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none"
+                className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
                 placeholder="••••••••"
               />
             </div>
@@ -117,7 +119,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="mt-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
             >
               {loading ? "Signing in…" : "Sign in"}
             </button>

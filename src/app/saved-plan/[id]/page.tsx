@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { GlowOrb } from "~/components/glow-orb";
 import { createClient } from "~/lib/supabase/server";
 
 const CARD_LABEL: Record<string, string> = {
@@ -39,7 +40,8 @@ export default async function SavedPlanPage({
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
+      <GlowOrb className="-z-10 fixed inset-x-0 top-0 h-[640px] w-full rounded-none opacity-[0.22] blur-3xl" />
       <div className="mx-auto max-w-xl px-6 py-12">
         <Link
           href="/start"
@@ -63,16 +65,18 @@ export default async function SavedPlanPage({
         <p className="mb-1 text-xs uppercase tracking-widest text-muted-foreground">
           {CARD_LABEL[plan.chosen_key as string] ?? plan.chosen_key}
         </p>
-        <h1 className="mb-1 text-2xl font-semibold text-foreground">
+        <h1 className="font-display mb-1 text-3xl font-semibold text-foreground">
           {plan.title}
         </h1>
         <p className="mb-8 text-xs text-muted-foreground">{date}</p>
 
-        <div className="mb-8 rounded-xl border border-border bg-card px-5 py-4">
+        <div className="glass-card mb-8 px-6 py-5">
           <p className="text-sm leading-relaxed text-muted-foreground">
             {plan.chosen_step}
           </p>
         </div>
+
+        <hr className="my-8 border-border/40" />
 
         <ol className="space-y-3">
           {steps.map((step, i) => (
