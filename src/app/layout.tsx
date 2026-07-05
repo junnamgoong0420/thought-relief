@@ -1,4 +1,5 @@
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { ThemeProvider } from "./theme-provider";
@@ -27,6 +28,7 @@ export default function RootLayout({
       <body className={`${inter.className} ${playfair.variable}`}>
         <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
