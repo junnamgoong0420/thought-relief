@@ -36,7 +36,7 @@ async function searchForResource(query: string): Promise<SearchHit[]> {
       },
       toolChoice: "required",
       stopWhen: stepCountIs(1),
-      prompt: `Search for: ${query}`,
+      prompt: `Find a specific, real, freely accessible resource that would help someone actually do this: ${query}. Any resource type is fair game — a song or playlist to listen to, a video, an article, a reference guide, an app or tool, anything — as long as it's concrete and directly usable, not just general background reading.`,
     });
     const hits: SearchHit[] = [];
     for (const step of result.steps ?? []) {
@@ -151,7 +151,7 @@ export async function POST(req: Request) {
 Three-part job:
 1. Break that action into 4–5 small, sequential, immediately doable steps: one sentence each, second-person, action-first (start with a verb), under 20 words, all steps together under 10 minutes, each leading naturally to the next. Reference the student's specific subject/struggle/emotional state from their message where it fits.
 2. Write a "title" for saving this plan: format "[Subject] → [Specific action]" (e.g. "Calc exam → 5-min sprint"). Under 20 characters total (strict), no quotes/trailing punctuation/filler — a plain, ordinary-looking title.
-3. Pick "resourceUrl" from the search results below, if any were provided — the one that's the best genuine match for the overall action ("${choiceLabel}": "${microstep}"). Copy the URL exactly as given. Never invent, guess, or modify a URL. If no search results were provided, or none are a good match, set it to null.
+3. Pick "resourceUrl" from the search results below, if any were provided — the one that most helps the student actually carry out the overall action ("${choiceLabel}": "${microstep}"). Any resource type counts: a song/playlist, video, article, guide, app, tool, whatever fits — be generous, not strict, about what "helps" means. Copy the URL exactly as given. Never invent, guess, or modify a URL. Only set it to null if no search results were provided, or every single one is clearly unrelated or broken.
 
 No markdown, no bullet symbols, no em dashes (—), no extra commentary.
 Return ONLY a valid JSON object with exactly three keys:
