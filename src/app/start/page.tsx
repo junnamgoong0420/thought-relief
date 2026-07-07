@@ -271,6 +271,7 @@ const FLOATING_THOUGHTS = [
 
 function LoadingView() {
   const [msgIndex, setMsgIndex] = useState(0);
+  const [showSlowNotice, setShowSlowNotice] = useState(false);
 
   useEffect(() => {
     const id = setInterval(
@@ -278,6 +279,11 @@ function LoadingView() {
       2500,
     );
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const id = setTimeout(() => setShowSlowNotice(true), 30_000);
+    return () => clearTimeout(id);
   }, []);
 
   return (
@@ -351,6 +357,12 @@ function LoadingView() {
           />
         ))}
       </div>
+
+      {showSlowNotice && (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Taking longer than expected…
+        </p>
+      )}
     </div>
   );
 }
@@ -535,7 +547,7 @@ function PageShell({
             href="/"
             className="font-display text-lg font-bold text-foreground transition-opacity hover:opacity-70"
           >
-            ThoughtRelief
+            Thought<span className="text-primary">Relief</span>
           </a>
           <div className="flex items-center gap-2">
             {signedIn ? (
@@ -710,12 +722,41 @@ function MicrostepResults({
   );
 }
 
+function RegenerateLoading() {
+  const [showSlowNotice, setShowSlowNotice] = useState(false);
+
+  useEffect(() => {
+    const id = setTimeout(() => setShowSlowNotice(true), 30_000);
+    return () => clearTimeout(id);
+  }, []);
+
+  return (
+    <div className="mb-5 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-6">
+      <div className="flex gap-2">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="dot h-2 w-2 rounded-full bg-primary"
+            style={{ animationDelay: `${i * 0.22}s` }}
+          />
+        ))}
+      </div>
+      {showSlowNotice && (
+        <p className="text-xs text-muted-foreground">
+          Taking longer than expected…
+        </p>
+      )}
+    </div>
+  );
+}
+
 function PlanView({
   chosenKey,
   chosenStep,
   actionPlan,
   actionPlanLoading,
   actionPlanIsFallback,
+  actionPlanResourceUrl,
   onAdvance,
 }: {
   chosenKey: MicrostepKey;
@@ -723,6 +764,7 @@ function PlanView({
   actionPlan: string[] | null;
   actionPlanLoading: boolean;
   actionPlanIsFallback: boolean;
+  actionPlanResourceUrl: string | null;
   onAdvance: () => void;
 }) {
   const card = CARDS.find((c) => c.key === chosenKey) ?? CARDS[0];
@@ -749,17 +791,7 @@ function PlanView({
         <p className="text-sm leading-relaxed text-foreground">{chosenStep}</p>
       </div>
 
-      {actionPlanLoading && (
-        <div className="mb-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-6">
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="dot h-2 w-2 rounded-full bg-primary"
-              style={{ animationDelay: `${i * 0.22}s` }}
-            />
-          ))}
-        </div>
-      )}
+      {actionPlanLoading && <RegenerateLoading />}
 
       {!actionPlanLoading && actionPlan && (
         <div className="mb-5 w-full rounded-2xl border border-border bg-card px-6 py-5 text-left">
@@ -779,6 +811,16 @@ function PlanView({
               </li>
             ))}
           </ol>
+          {actionPlanResourceUrl && (
+            <a
+              href={actionPlanResourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-block text-xs font-medium text-primary underline-offset-2 hover:underline"
+            >
+              Watch / read more →
+            </a>
+          )}
         </div>
       )}
 
@@ -1216,6 +1258,9 @@ export default function StartPage() {
   const [actionPlanTitle, setActionPlanTitle] = useState<string | null>(null);
   const [actionPlanIsFallback, setActionPlanIsFallback] = useState(false);
   const [actionPlanLoading, setActionPlanLoading] = useState(false);
+  const [actionPlanResourceUrl, setActionPlanResourceUrl] = useState<
+    string | null
+  >(null);
   const [regenerateCount, setRegenerateCount] = useState(0);
   const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
   const [savedPlansLoading, setSavedPlansLoading] = useState(false);
@@ -1368,7 +1413,12 @@ export default function StartPage() {
   async function fetchActionPlan(
     key: MicrostepKey,
     ms: Microsteps,
-  ): Promise<{ steps: string[]; title: string; isFallback: boolean }> {
+  ): Promise<{
+    steps: string[];
+    title: string;
+    isFallback: boolean;
+    resourceUrl: string | null;
+  }> {
     try {
       const res = await fetch("/api/action-plan", {
         method: "POST",
@@ -1388,7 +1438,14 @@ export default function StartPage() {
             typeof data.title === "string" && data.title.trim()
               ? data.title.trim()
               : fallbackTitle(key, ms);
-          return { steps: data.steps as string[], title, isFallback: false };
+          const resourceUrl =
+            typeof data.resourceUrl === "string" ? data.resourceUrl : null;
+          return {
+            steps: data.steps as string[],
+            title,
+            isFallback: false,
+            resourceUrl,
+          };
         }
       }
     } catch {
@@ -1398,6 +1455,7 @@ export default function StartPage() {
       steps: FALLBACK_STEPS[key],
       title: fallbackTitle(key, ms),
       isFallback: true,
+      resourceUrl: null,
     };
   }
 
@@ -1407,15 +1465,18 @@ export default function StartPage() {
     setActionPlan(null);
     setActionPlanTitle(null);
     setActionPlanIsFallback(false);
+    setActionPlanResourceUrl(null);
     setPhase("action-loading");
     const {
       steps,
       title,
       isFallback: fallback,
+      resourceUrl,
     } = await fetchActionPlan(key, microsteps);
     setActionPlan(steps);
     setActionPlanTitle(title);
     setActionPlanIsFallback(fallback);
+    setActionPlanResourceUrl(resourceUrl);
     setPhase("plan");
   }
 
@@ -1428,10 +1489,12 @@ export default function StartPage() {
       steps,
       title,
       isFallback: fallback,
+      resourceUrl,
     } = await fetchActionPlan(chosenKey, microsteps);
     setActionPlan(steps);
     setActionPlanTitle(title);
     setActionPlanIsFallback(fallback);
+    setActionPlanResourceUrl(resourceUrl);
     setActionPlanLoading(false);
   }
 
@@ -1471,6 +1534,7 @@ export default function StartPage() {
     setActionPlanTitle(null);
     setActionPlanIsFallback(false);
     setActionPlanLoading(false);
+    setActionPlanResourceUrl(null);
     setRegenerateCount(0);
     setPhase("input");
   }
@@ -1543,6 +1607,7 @@ export default function StartPage() {
         actionPlan={actionPlan}
         actionPlanLoading={actionPlanLoading}
         actionPlanIsFallback={actionPlanIsFallback}
+        actionPlanResourceUrl={actionPlanResourceUrl}
         onAdvance={() => setPhase("done")}
       />,
     );

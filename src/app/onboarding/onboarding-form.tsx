@@ -90,7 +90,7 @@ export function OnboardingForm({ userId }: { userId: string }) {
       <header className="border-b border-border py-5">
         <div className="mx-auto max-w-6xl px-6">
           <span className="font-display text-lg font-bold text-foreground">
-            ThoughtRelief
+            Thought<span className="text-primary">Relief</span>
           </span>
         </div>
       </header>

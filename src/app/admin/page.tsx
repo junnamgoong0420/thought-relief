@@ -60,7 +60,7 @@ export default async function AdminPage() {
             href="/start"
             className="font-display text-lg font-bold text-foreground transition-opacity hover:opacity-70"
           >
-            ThoughtRelief
+            Thought<span className="text-primary">Relief</span>
           </Link>
         </div>
       </header>
