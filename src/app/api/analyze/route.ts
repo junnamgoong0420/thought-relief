@@ -188,7 +188,10 @@ export async function POST(req: Request) {
       temperature: 0.8,
       // This app is meant to be a quick flow — never let a hung request stall
       // the student for longer than this; the client falls back gracefully.
-      abortSignal: AbortSignal.timeout(60_000),
+      // maxRetries: 0 because generateText retries by default (up to 3
+      // attempts), which would silently multiply this timeout by up to 3x.
+      maxRetries: 0,
+      abortSignal: AbortSignal.timeout(55_000),
       system: `You are a calm, grounded companion for high school students spiraling with academic panic the night before a test.
 
 Think through the steps below silently — never reveal reasoning, never mention "step 1/2/3," output only the final JSON.

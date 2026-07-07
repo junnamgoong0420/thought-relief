@@ -20,9 +20,36 @@ function sanitizeResourceUrl(url: unknown): string | null {
   }
 }
 
-// Total AI generation time for this endpoint (search + main call) must stay
-// well under 1 minute so the app's quick flow doesn't stall.
-const MAIN_GENERATION_TIMEOUT_MS = 45_000;
+// Total AI generation time for this endpoint (search + main call + link
+// verification) must stay well under 1 minute so the app's quick flow
+// doesn't stall. generateText retries failed calls by default (up to 3
+// attempts), which multiplies an abortSignal timeout by up to 3x — maxRetries
+// is set to 0 on every call below so the timeout is the actual ceiling.
+const MAIN_GENERATION_TIMEOUT_MS = 35_000;
+const LINK_VERIFY_TIMEOUT_MS = 6_000;
+
+// A resource is only worth showing if it's actually reachable right now —
+// the model can pick a real, on-topic search result whose page has since
+// been taken down, redirects to an error, or never loads. HEAD is tried
+// first since it's cheap; some servers reject HEAD (405/403), so fall back
+// to GET. Any network error, timeout, or non-2xx/3xx status is treated as
+// dead — better to show no link than a broken one.
+async function isUrlReachable(url: string): Promise<boolean> {
+  for (const method of ["HEAD", "GET"] as const) {
+    try {
+      const res = await fetch(url, {
+        method,
+        redirect: "follow",
+        signal: AbortSignal.timeout(LINK_VERIFY_TIMEOUT_MS),
+      });
+      if (res.ok) return true;
+      if (res.status !== 405 && res.status !== 403) return false;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
 
 type SearchHit = { title: string; url: string; snippet: string };
 
@@ -34,7 +61,7 @@ type SearchHit = { title: string; url: string; snippet: string };
 // This app is meant to be a quick flow — if a resource can't be found fast,
 // move on without one rather than making the student wait. Capped well under
 // the 1-minute total generation budget so the main call still has room.
-const RESOURCE_SEARCH_TIMEOUT_MS = 15_000;
+const RESOURCE_SEARCH_TIMEOUT_MS = 10_000;
 
 async function searchForResource(query: string): Promise<SearchHit[]> {
   try {
@@ -45,6 +72,7 @@ async function searchForResource(query: string): Promise<SearchHit[]> {
       },
       toolChoice: "required",
       stopWhen: stepCountIs(1),
+      maxRetries: 0,
       abortSignal: AbortSignal.timeout(RESOURCE_SEARCH_TIMEOUT_MS),
       prompt: `Find a specific, real, freely accessible resource that would help someone actually do this: ${query}. Any resource type is fair game — a song or playlist to listen to, a video, an article, a reference guide, an app or tool, anything — as long as it's concrete and directly usable, not just general background reading.`,
     });
@@ -156,6 +184,7 @@ export async function POST(req: Request) {
     const result = await generateText({
       model: gateway("google/gemini-2.5-flash-lite"),
       temperature: 1.0,
+      maxRetries: 0,
       abortSignal: AbortSignal.timeout(MAIN_GENERATION_TIMEOUT_MS),
       system: `You are a calm companion helping a high school student act on their chosen coping strategy: "${choiceLabel}".
 
@@ -210,7 +239,25 @@ Return ONLY a valid JSON object with exactly three keys:
     title = `${title.slice(0, 17)}...`;
   }
 
-  const resourceUrl = sanitizeResourceUrl(parsed.resourceUrl);
+  let resourceUrl = sanitizeResourceUrl(parsed.resourceUrl);
+
+  // Guard against hallucination: only accept a URL that exactly matches one
+  // we actually retrieved from search — never one the model reconstructed
+  // or modified from memory.
+  if (resourceUrl) {
+    const retrievedUrls = new Set(
+      searchHits.map((h) => sanitizeResourceUrl(h.url)).filter(Boolean),
+    );
+    if (!retrievedUrls.has(resourceUrl)) {
+      resourceUrl = null;
+    }
+  }
+
+  // Guard against dead links: verify it actually loads before ever showing
+  // it to the student.
+  if (resourceUrl && !(await isUrlReachable(resourceUrl))) {
+    resourceUrl = null;
+  }
 
   return Response.json({ steps: validSteps, title, resourceUrl });
 }
