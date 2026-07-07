@@ -44,7 +44,7 @@ function LoginForm() {
           href="/"
           className="font-display text-lg font-bold text-foreground"
         >
-          ThoughtRelief
+          Thought<span className="text-primary">Relief</span>
         </Link>
       </header>
 

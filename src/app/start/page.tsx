@@ -271,6 +271,7 @@ const FLOATING_THOUGHTS = [
 
 function LoadingView() {
   const [msgIndex, setMsgIndex] = useState(0);
+  const [showSlowNotice, setShowSlowNotice] = useState(false);
 
   useEffect(() => {
     const id = setInterval(
@@ -278,6 +279,11 @@ function LoadingView() {
       2500,
     );
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const id = setTimeout(() => setShowSlowNotice(true), 30_000);
+    return () => clearTimeout(id);
   }, []);
 
   return (
@@ -351,6 +357,12 @@ function LoadingView() {
           />
         ))}
       </div>
+
+      {showSlowNotice && (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Taking longer than expected…
+        </p>
+      )}
     </div>
   );
 }
@@ -535,7 +547,7 @@ function PageShell({
             href="/"
             className="font-display text-lg font-bold text-foreground transition-opacity hover:opacity-70"
           >
-            ThoughtRelief
+            Thought<span className="text-primary">Relief</span>
           </a>
           <div className="flex items-center gap-2">
             {signedIn ? (
@@ -710,6 +722,34 @@ function MicrostepResults({
   );
 }
 
+function RegenerateLoading() {
+  const [showSlowNotice, setShowSlowNotice] = useState(false);
+
+  useEffect(() => {
+    const id = setTimeout(() => setShowSlowNotice(true), 30_000);
+    return () => clearTimeout(id);
+  }, []);
+
+  return (
+    <div className="mb-5 flex w-full flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-6">
+      <div className="flex gap-2">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="dot h-2 w-2 rounded-full bg-primary"
+            style={{ animationDelay: `${i * 0.22}s` }}
+          />
+        ))}
+      </div>
+      {showSlowNotice && (
+        <p className="text-xs text-muted-foreground">
+          Taking longer than expected…
+        </p>
+      )}
+    </div>
+  );
+}
+
 function PlanView({
   chosenKey,
   chosenStep,
@@ -751,17 +791,7 @@ function PlanView({
         <p className="text-sm leading-relaxed text-foreground">{chosenStep}</p>
       </div>
 
-      {actionPlanLoading && (
-        <div className="mb-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-6">
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="dot h-2 w-2 rounded-full bg-primary"
-              style={{ animationDelay: `${i * 0.22}s` }}
-            />
-          ))}
-        </div>
-      )}
+      {actionPlanLoading && <RegenerateLoading />}
 
       {!actionPlanLoading && actionPlan && (
         <div className="mb-5 w-full rounded-2xl border border-border bg-card px-6 py-5 text-left">
