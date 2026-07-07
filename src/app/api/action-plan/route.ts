@@ -20,6 +20,10 @@ function sanitizeResourceUrl(url: unknown): string | null {
   }
 }
 
+// Total AI generation time for this endpoint (search + main call) must stay
+// well under 1 minute so the app's quick flow doesn't stall.
+const MAIN_GENERATION_TIMEOUT_MS = 45_000;
+
 type SearchHit = { title: string; url: string; snippet: string };
 
 // Runs the search as its own single-step call and returns the raw hits as
@@ -27,6 +31,11 @@ type SearchHit = { title: string; url: string; snippet: string };
 // reliably continue to a second, text-producing step within one
 // generateText() call, so the "ask the model to write JSON" part happens in
 // a separate, tool-free call instead (see main call below).
+// This app is meant to be a quick flow — if a resource can't be found fast,
+// move on without one rather than making the student wait. Capped well under
+// the 1-minute total generation budget so the main call still has room.
+const RESOURCE_SEARCH_TIMEOUT_MS = 15_000;
+
 async function searchForResource(query: string): Promise<SearchHit[]> {
   try {
     const result = await generateText({
@@ -36,6 +45,7 @@ async function searchForResource(query: string): Promise<SearchHit[]> {
       },
       toolChoice: "required",
       stopWhen: stepCountIs(1),
+      abortSignal: AbortSignal.timeout(RESOURCE_SEARCH_TIMEOUT_MS),
       prompt: `Find a specific, real, freely accessible resource that would help someone actually do this: ${query}. Any resource type is fair game — a song or playlist to listen to, a video, an article, a reference guide, an app or tool, anything — as long as it's concrete and directly usable, not just general background reading.`,
     });
     const hits: SearchHit[] = [];
@@ -146,6 +156,7 @@ export async function POST(req: Request) {
     const result = await generateText({
       model: gateway("google/gemini-2.5-flash-lite"),
       temperature: 1.0,
+      abortSignal: AbortSignal.timeout(MAIN_GENERATION_TIMEOUT_MS),
       system: `You are a calm companion helping a high school student act on their chosen coping strategy: "${choiceLabel}".
 
 Three-part job:

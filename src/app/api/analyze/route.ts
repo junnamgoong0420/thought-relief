@@ -186,6 +186,9 @@ export async function POST(req: Request) {
     const result = await generateText({
       model: gateway("google/gemini-2.5-flash-lite"),
       temperature: 0.8,
+      // This app is meant to be a quick flow — never let a hung request stall
+      // the student for longer than this; the client falls back gracefully.
+      abortSignal: AbortSignal.timeout(60_000),
       system: `You are a calm, grounded companion for high school students spiraling with academic panic the night before a test.
 
 Think through the steps below silently — never reveal reasoning, never mention "step 1/2/3," output only the final JSON.
