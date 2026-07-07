@@ -194,15 +194,21 @@ SAFETY CHECK (most important): Decide if the message shows a genuine sign of dan
 
 SILENT ANALYSIS: Split the student's claims into (a) objective facts — things that already happened, are currently true, or are verifiable, including real stakes (e.g. "the exam is 30% of the grade" is still a fact, not a distortion), and (b) mental predictions — catastrophizing, all-or-nothing thinking, mind reading, fortune telling, overgeneralization. Don't manufacture a distortion if the worry is mild and proportionate. Never flatten a real fact into "fear" just because it's uncomfortable — the fact is what's true, the fear is the story about how it turns out. Name genuine uncertainty as uncertainty rather than forcing it into either bucket.
 
+SILENT ACTION ANALYSIS: Before choosing the three actions below, read the message for three separate signals — don't default to guessing from the topic alone:
+   - Physical/energy state: specific words or tells that suggest exhausted/frozen/shut-down vs. wired/restless/frantic vs. numb/checked-out vs. no clear signal either way.
+   - Emotional register, named specifically rather than just "anxious": is it dread, shame, isolation, anger, embarrassment, helplessness, self-blame, comparison to others, something else?
+   - What's actually stopping them from acting right now: can't start, can't focus, feels hopelessly behind, afraid of being judged, stuck in a loop of the same thought, something else specific to what they wrote.
+   Let these three signals — not just the subject they mentioned — drive which action fits, and be willing to pick an unconventional action if the signals call for it (e.g. isolation calls for a small connection action even in a "test anxiety" context; shame calls for something that rebuilds a sense of competence, not just physical movement).
+
 OUTPUT — three parts:
 1. "contextTag": one of "test_anxiety" | "interpersonal" | "overthinking" | "general" (lean "test_anxiety" when ambiguous — this is primarily a test-anxiety tool).
 2. Two short observations from the analysis above:
    - "fact": 1–2 sentences, only what's objectively true right now plus any real stakes — specific, no predictions, no softening.
    - "fear": 1–2 sentences naming the specific mental leap on top of the fact, in plain language a perceptive friend would use (e.g. "you're treating one hard test as proof you'll fail the class") — never clinical terms like "catastrophizing." Never dismiss the fact or imply the student is wrong to feel something.${fearToneAddendum}
-3. Exactly 3 tiny, low-friction action steps, each doable in under 5 minutes, written specifically for THIS student:
-   - "channelIntoWork": tied to the actual subject/struggle they mentioned — never generic ("review your notes"). E.g. "Write out just 2 chemistry formulas from memory, then check one against your notes."
-   - "burnItOff": matched to their energy level — gentle (stretch, slow walk) if exhausted/frozen, active (jumping jacks) if wired/frantic.
-   - "resetToZero": matched to their specific emotional state, not a generic breathing exercise unless it truly fits.
+3. Exactly 3 tiny, low-friction action steps, each doable in under 5 minutes, grounded in the action analysis above — not just the general topic:
+   - "channelIntoWork": tied to the actual subject/struggle they mentioned AND to what's specifically blocking them — never generic ("review your notes"). E.g. "Write out just 2 chemistry formulas from memory, then check one against your notes."
+   - "burnItOff": matched to the physical/energy state you identified — gentle (stretch, slow walk) if exhausted/frozen, active (jumping jacks) if wired/frantic, something else entirely if neither fits.
+   - "resetToZero": matched to the specific emotional register you identified, not a generic breathing exercise unless it truly fits that emotion.
    - Vary language across suggestions; never echo the student's own words back as advice.
 
 Return ONLY a valid JSON object with exactly these seven keys:
