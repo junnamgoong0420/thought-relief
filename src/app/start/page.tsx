@@ -716,6 +716,7 @@ function PlanView({
   actionPlan,
   actionPlanLoading,
   actionPlanIsFallback,
+  actionPlanResourceUrl,
   onAdvance,
 }: {
   chosenKey: MicrostepKey;
@@ -723,6 +724,7 @@ function PlanView({
   actionPlan: string[] | null;
   actionPlanLoading: boolean;
   actionPlanIsFallback: boolean;
+  actionPlanResourceUrl: string | null;
   onAdvance: () => void;
 }) {
   const card = CARDS.find((c) => c.key === chosenKey) ?? CARDS[0];
@@ -779,6 +781,16 @@ function PlanView({
               </li>
             ))}
           </ol>
+          {actionPlanResourceUrl && (
+            <a
+              href={actionPlanResourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-block text-xs font-medium text-primary underline-offset-2 hover:underline"
+            >
+              Watch / read more →
+            </a>
+          )}
         </div>
       )}
 
@@ -1216,6 +1228,9 @@ export default function StartPage() {
   const [actionPlanTitle, setActionPlanTitle] = useState<string | null>(null);
   const [actionPlanIsFallback, setActionPlanIsFallback] = useState(false);
   const [actionPlanLoading, setActionPlanLoading] = useState(false);
+  const [actionPlanResourceUrl, setActionPlanResourceUrl] = useState<
+    string | null
+  >(null);
   const [regenerateCount, setRegenerateCount] = useState(0);
   const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
   const [savedPlansLoading, setSavedPlansLoading] = useState(false);
@@ -1368,7 +1383,12 @@ export default function StartPage() {
   async function fetchActionPlan(
     key: MicrostepKey,
     ms: Microsteps,
-  ): Promise<{ steps: string[]; title: string; isFallback: boolean }> {
+  ): Promise<{
+    steps: string[];
+    title: string;
+    isFallback: boolean;
+    resourceUrl: string | null;
+  }> {
     try {
       const res = await fetch("/api/action-plan", {
         method: "POST",
@@ -1388,7 +1408,14 @@ export default function StartPage() {
             typeof data.title === "string" && data.title.trim()
               ? data.title.trim()
               : fallbackTitle(key, ms);
-          return { steps: data.steps as string[], title, isFallback: false };
+          const resourceUrl =
+            typeof data.resourceUrl === "string" ? data.resourceUrl : null;
+          return {
+            steps: data.steps as string[],
+            title,
+            isFallback: false,
+            resourceUrl,
+          };
         }
       }
     } catch {
@@ -1398,6 +1425,7 @@ export default function StartPage() {
       steps: FALLBACK_STEPS[key],
       title: fallbackTitle(key, ms),
       isFallback: true,
+      resourceUrl: null,
     };
   }
 
@@ -1407,15 +1435,18 @@ export default function StartPage() {
     setActionPlan(null);
     setActionPlanTitle(null);
     setActionPlanIsFallback(false);
+    setActionPlanResourceUrl(null);
     setPhase("action-loading");
     const {
       steps,
       title,
       isFallback: fallback,
+      resourceUrl,
     } = await fetchActionPlan(key, microsteps);
     setActionPlan(steps);
     setActionPlanTitle(title);
     setActionPlanIsFallback(fallback);
+    setActionPlanResourceUrl(resourceUrl);
     setPhase("plan");
   }
 
@@ -1428,10 +1459,12 @@ export default function StartPage() {
       steps,
       title,
       isFallback: fallback,
+      resourceUrl,
     } = await fetchActionPlan(chosenKey, microsteps);
     setActionPlan(steps);
     setActionPlanTitle(title);
     setActionPlanIsFallback(fallback);
+    setActionPlanResourceUrl(resourceUrl);
     setActionPlanLoading(false);
   }
 
@@ -1471,6 +1504,7 @@ export default function StartPage() {
     setActionPlanTitle(null);
     setActionPlanIsFallback(false);
     setActionPlanLoading(false);
+    setActionPlanResourceUrl(null);
     setRegenerateCount(0);
     setPhase("input");
   }
@@ -1543,6 +1577,7 @@ export default function StartPage() {
         actionPlan={actionPlan}
         actionPlanLoading={actionPlanLoading}
         actionPlanIsFallback={actionPlanIsFallback}
+        actionPlanResourceUrl={actionPlanResourceUrl}
         onAdvance={() => setPhase("done")}
       />,
     );
