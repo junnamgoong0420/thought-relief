@@ -28,12 +28,33 @@ function sanitizeResourceUrl(url: unknown): string | null {
 const MAIN_GENERATION_TIMEOUT_MS = 35_000;
 const LINK_VERIFY_TIMEOUT_MS = 6_000;
 
+// Some URLs return HTTP 200 for anyone but don't actually deliver the
+// promised content to a stranger — a personal Amazon Music "user-playlists"
+// link, a private library page, someone's account page. Filter these out
+// before they're ever offered to the model as a candidate.
+const PRIVATE_URL_PATTERNS = [
+  /user-playlists/i,
+  /\/library\//i,
+  /\/my-library/i,
+  /\/account\//i,
+  /\/my-account/i,
+  /\/profile\//i,
+  /\/u\/\d/i, // e.g. open.spotify.com/u/12345 style personal profile paths
+];
+
+function looksLikePrivateResource(url: string): boolean {
+  return PRIVATE_URL_PATTERNS.some((p) => p.test(url));
+}
+
 // A resource is only worth showing if it's actually reachable right now —
 // the model can pick a real, on-topic search result whose page has since
 // been taken down, redirects to an error, or never loads. HEAD is tried
 // first since it's cheap; some servers reject HEAD (405/403), so fall back
-// to GET. Any network error, timeout, or non-2xx/3xx status is treated as
-// dead — better to show no link than a broken one.
+// to GET. A redirect that lands on a login/signin page means the content
+// isn't actually viewable by an anonymous student, even though the request
+// itself "succeeds" — treat that as dead too. Any network error, timeout,
+// non-2xx/3xx status, or login-wall redirect is treated as dead — better to
+// show no link than a broken or inaccessible one.
 async function isUrlReachable(url: string): Promise<boolean> {
   for (const method of ["HEAD", "GET"] as const) {
     try {
@@ -42,7 +63,9 @@ async function isUrlReachable(url: string): Promise<boolean> {
         redirect: "follow",
         signal: AbortSignal.timeout(LINK_VERIFY_TIMEOUT_MS),
       });
-      if (res.ok) return true;
+      if (res.ok) {
+        return !/\b(signin|sign-in|login|log-in|authwall)\b/i.test(res.url);
+      }
       if (res.status !== 405 && res.status !== 403) return false;
     } catch {
       return false;
@@ -74,7 +97,7 @@ async function searchForResource(query: string): Promise<SearchHit[]> {
       stopWhen: stepCountIs(1),
       maxRetries: 0,
       abortSignal: AbortSignal.timeout(RESOURCE_SEARCH_TIMEOUT_MS),
-      prompt: `Find a specific, real, freely accessible resource that would help someone actually do this: ${query}. Any resource type is fair game — a song or playlist to listen to, a video, an article, a reference guide, an app or tool, anything — as long as it's concrete and directly usable, not just general background reading.`,
+      prompt: `Find a specific, real, freely accessible resource that would help someone actually do this: ${query}. Favor well-known, concrete, directly linkable resources over vague ones — e.g. a specific Quizlet study set or flashcard deck, a named Spotify/YouTube song or playlist, a specific workout or stretching video, a Khan Academy lesson, a Purdue OWL guide, an app. It must be a single, real, publicly accessible page — not a homepage, a search-results page, or a personal/private page (no user profiles, personal libraries, or account pages).`,
     });
     const hits: SearchHit[] = [];
     for (const step of result.steps ?? []) {
@@ -94,6 +117,7 @@ async function searchForResource(query: string): Promise<SearchHit[]> {
               url: string;
               snippet?: string;
             };
+            if (looksLikePrivateResource(url)) continue;
             hits.push({
               title,
               url,
@@ -191,7 +215,7 @@ export async function POST(req: Request) {
 Three-part job:
 1. Break that action into 4–5 small, sequential, immediately doable steps: one sentence each, second-person, action-first (start with a verb), under 20 words, all steps together under 10 minutes, each leading naturally to the next. Reference the student's specific subject/struggle/emotional state from their message where it fits. Fail condition: a step that would read identically for any student doing any activity (e.g. "close your eyes and breathe," "take a break") — every step must tie to specifics from what the student wrote or from the search results below. If you pick a "resourceUrl" (see below), one of the steps must explicitly tell the student to use it (e.g. "Play the track linked below and focus on the rhythm" or "Open the guide linked below and read the first section").
 2. Write a "title" for saving this plan: format "[Subject] → [Specific action]" (e.g. "Calc exam → 5-min sprint"). Under 20 characters total (strict), no quotes/trailing punctuation/filler — a plain, ordinary-looking title.
-3. Pick "resourceUrl" from the search results below, if any were provided — the one that most helps the student actually carry out the overall action ("${choiceLabel}": "${microstep}"). Any resource type counts: a song/playlist, video, article, guide, app, tool, whatever fits — be generous, not strict, about what "helps" means. Copy the URL exactly as given. Never invent, guess, or modify a URL. Only set it to null if no search results were provided, or every single one is clearly unrelated or broken.
+3. Pick "resourceUrl" from the search results below, if any were provided — the one that most helps the student actually carry out the overall action ("${choiceLabel}": "${microstep}"). Any resource type counts: a specific Quizlet set, a named song or playlist, a workout/stretching video, an article, guide, app, tool, whatever fits — be generous, not strict, about what "helps" means, as long as it's a specific, real, directly linkable page. Copy the URL exactly as given. Never invent, guess, or modify a URL. Only set it to null if no search results were provided, or every single one is clearly unrelated or broken.
 
 No markdown, no bullet symbols, no em dashes (—), no extra commentary.
 Return ONLY a valid JSON object with exactly three keys:
@@ -217,7 +241,7 @@ Return ONLY a valid JSON object with exactly three keys:
   }
 
   // Accept 3–6 steps to tolerate minor model variance; trim to max 5
-  const validSteps = Array.isArray(parsed.steps)
+  let validSteps = Array.isArray(parsed.steps)
     ? parsed.steps
         .filter((s) => typeof s === "string" && s.trim().length > 3)
         .slice(0, 5)
@@ -255,8 +279,21 @@ Return ONLY a valid JSON object with exactly three keys:
 
   // Guard against dead links: verify it actually loads before ever showing
   // it to the student.
-  if (resourceUrl && !(await isUrlReachable(resourceUrl))) {
-    resourceUrl = null;
+  if (resourceUrl) {
+    const reachable = await isUrlReachable(resourceUrl);
+    if (!reachable) resourceUrl = null;
+  }
+
+  // If the resource got rejected by a guard above, the model may still have
+  // written a step assuming it would exist (e.g. "...linked below"). Strip
+  // that dangling reference rather than leave a broken pointer in the UI.
+  if (!resourceUrl) {
+    validSteps = validSteps.map((s) =>
+      s
+        .replace(/\s*\blinked below\b\.?/gi, "")
+        .replace(/\s{2,}/g, " ")
+        .trim(),
+    );
   }
 
   return Response.json({ steps: validSteps, title, resourceUrl });
