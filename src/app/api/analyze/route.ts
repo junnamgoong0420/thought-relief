@@ -87,7 +87,7 @@ export async function POST(req: Request) {
     return Response.json({ crisis: true });
   }
 
-  // Rate limiting: authenticated users get 7 reflections per calendar week (Mon–Sun UTC)
+  // Rate limiting: authenticated users get 5 reflections per calendar week (Mon–Sun UTC)
   // Wrapped in try/catch — a Supabase failure must never block the AI feature
   let userId: string | null = null;
   try {
@@ -116,7 +116,7 @@ export async function POST(req: Request) {
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id)
           .gte("created_at", weekStart);
-        if ((count ?? 0) >= 10) {
+        if ((count ?? 0) >= 5) {
           return Response.json({ error: "limit" }, { status: 429 });
         }
       }
