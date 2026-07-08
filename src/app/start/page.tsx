@@ -982,10 +982,14 @@ function DoneView({
       <EmberIllustration />
 
       <h2 className="font-display mt-6 mb-2 text-3xl font-bold text-foreground sm:text-4xl">
-        Nice work.
+        {feedback === "no" && hasRegenerated
+          ? "Sorry about that."
+          : "Nice work."}
       </h2>
       <p className="mb-8 text-muted-foreground">
-        One small step chosen. That&apos;s enough.
+        {feedback === "no" && hasRegenerated
+          ? "We didn't land on something useful this time."
+          : "One small step chosen. That's enough."}
       </p>
 
       {signedIn ? (
@@ -1045,8 +1049,8 @@ function DoneView({
             {feedback === "no" && hasRegenerated && (
               <div className="flex flex-col items-center gap-4">
                 <p className="text-sm text-muted-foreground">
-                  Let&apos;s leave it there for today &mdash; one step is
-                  enough.
+                  We&apos;ll leave it there for today, but we&apos;d love to
+                  know what would&apos;ve helped.
                 </p>
                 <PlanFeedbackForm onSubmit={onSubmitFeedback} />
                 <StartOverButton onReset={onReset} />
