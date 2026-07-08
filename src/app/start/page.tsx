@@ -295,10 +295,6 @@ function LoadingView() {
           75%  { opacity: 0.5; }
           100% { transform: translateY(-140px); opacity: 0; }
         }
-        @keyframes dot-bounce {
-          0%,80%,100% { transform: scale(0.7); opacity: 0.4; }
-          40%          { transform: scale(1);   opacity: 1;   }
-        }
         @keyframes msg-fade {
           0%   { opacity: 0; transform: translateY(4px); }
           15%  { opacity: 1; transform: translateY(0);   }
@@ -316,7 +312,6 @@ function LoadingView() {
           pointer-events: none;
           text-shadow: 0 0 12px rgba(251,146,60,0.4);
         }
-        .dot { animation: dot-bounce 1.4s ease-in-out infinite; }
         .progress-msg { animation: msg-fade 2.5s ease-in-out forwards; }
       `}</style>
 
@@ -352,7 +347,7 @@ function LoadingView() {
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="dot h-2 w-2 rounded-full bg-primary"
+            className="animate-dot-bounce h-2 w-2 rounded-full bg-primary"
             style={{ animationDelay: `${i * 0.22}s` }}
           />
         ))}
@@ -441,6 +436,11 @@ type SavedPlan = {
   chosen_step: string;
   steps: string[];
   created_at: string;
+};
+
+type PlanFeedback = {
+  feedback: string | null;
+  email: string | null;
 };
 
 const SIDEBAR_WIDTH = "280px";
@@ -736,7 +736,7 @@ function RegenerateLoading() {
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="dot h-2 w-2 rounded-full bg-primary"
+            className="animate-dot-bounce h-2 w-2 rounded-full bg-primary"
             style={{ animationDelay: `${i * 0.22}s` }}
           />
         ))}
@@ -835,24 +835,125 @@ function PlanView({
   );
 }
 
+function StartOverButton({ onReset }: { onReset: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onReset}
+      className="rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-all hover:opacity-90 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98]"
+    >
+      Start Over
+    </button>
+  );
+}
+
+function PlanFeedbackForm({
+  onSubmit,
+}: {
+  onSubmit: (feedback: PlanFeedback) => Promise<void>;
+}) {
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackEmail, setFeedbackEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  async function handleSubmit() {
+    if (submitting || submitted) return;
+    const hasContent = feedbackText.trim() || feedbackEmail.trim();
+    if (hasContent) {
+      setSubmitting(true);
+      await onSubmit({
+        feedback: feedbackText.trim() || null,
+        email: feedbackEmail.trim() || null,
+      });
+      setSubmitting(false);
+    }
+    setSubmitted(true);
+  }
+
+  if (submitted) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Thanks for letting us know.
+      </p>
+    );
+  }
+
+  return (
+    <div className="w-full text-left">
+      <label
+        htmlFor="feedback-text"
+        className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+      >
+        Feedback{" "}
+        <span className="font-normal normal-case text-muted-foreground/70">
+          (optional)
+        </span>
+      </label>
+      <textarea
+        id="feedback-text"
+        value={feedbackText}
+        onChange={(e) => setFeedbackText(e.target.value)}
+        placeholder="Your feedback helps us improve..."
+        maxLength={1000}
+        className="mb-4 h-24 w-full resize-none rounded-2xl border border-border bg-background p-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+      />
+
+      <label
+        htmlFor="feedback-email"
+        className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+      >
+        Email{" "}
+        <span className="font-normal normal-case text-muted-foreground/70">
+          (optional)
+        </span>
+      </label>
+      <p className="mb-1.5 text-xs text-muted-foreground">
+        Only if it&apos;s okay for us to follow up about your feedback.
+      </p>
+      <input
+        id="feedback-email"
+        type="email"
+        value={feedbackEmail}
+        onChange={(e) => setFeedbackEmail(e.target.value)}
+        placeholder="you@example.com"
+        className="mb-4 w-full rounded-full border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+      />
+
+      <div className="flex justify-center">
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={submitting}
+          className="rounded-full border border-border bg-background px-8 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
+        >
+          {submitting ? "Submitting..." : "Submit"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DoneView({
   onReset,
   signedIn,
   onRegenerate,
-  regenerateCount,
+  hasRegenerated,
   actionPlan,
   chosenKey,
   chosenStep,
   onSave,
+  onSubmitFeedback,
 }: {
   onReset: () => void;
   signedIn: boolean;
   onRegenerate: () => void;
-  regenerateCount: number;
+  hasRegenerated: boolean;
   actionPlan: string[] | null;
   chosenKey: MicrostepKey | null;
   chosenStep: string | null;
   onSave: () => Promise<void>;
+  onSubmitFeedback: (feedback: PlanFeedback) => Promise<void>;
 }) {
   const [feedback, setFeedback] = useState<"yes" | "no" | null>(null);
   const [saved, setSaved] = useState(false);
@@ -869,7 +970,7 @@ function DoneView({
   }
 
   function handleNo() {
-    if (regenerateCount >= 10) {
+    if (hasRegenerated) {
       setFeedback("no");
       return;
     }
@@ -935,28 +1036,20 @@ function DoneView({
                     Saved to your Saved actions.
                   </p>
                 )}
-                <button
-                  type="button"
-                  onClick={onReset}
-                  className="mt-2 rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-all hover:opacity-90 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98]"
-                >
-                  Start Over
-                </button>
+                <div className="mt-2">
+                  <StartOverButton onReset={onReset} />
+                </div>
               </div>
             )}
 
-            {feedback === "no" && regenerateCount >= 10 && (
-              <div className="flex flex-col items-center gap-3">
+            {feedback === "no" && hasRegenerated && (
+              <div className="flex flex-col items-center gap-4">
                 <p className="text-sm text-muted-foreground">
-                  You&apos;ve reached the regeneration limit for this session.
+                  Let&apos;s leave it there for today &mdash; one step is
+                  enough.
                 </p>
-                <button
-                  type="button"
-                  onClick={onReset}
-                  className="rounded-full bg-primary px-14 py-4 text-base font-semibold uppercase tracking-widest text-primary-foreground transition-all hover:opacity-90 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98]"
-                >
-                  Start Over
-                </button>
+                <PlanFeedbackForm onSubmit={onSubmitFeedback} />
+                <StartOverButton onReset={onReset} />
               </div>
             )}
           </div>
@@ -1074,7 +1167,7 @@ function LimitView({
         {signedIn ? (
           <>
             <h2 className="font-display mb-3 text-xl font-bold text-foreground">
-              You&apos;ve used all 10 reflections this week.
+              You&apos;ve used all 5 reflections this week.
             </h2>
             <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
               Your reflections reset every Monday. Come back then for a fresh
@@ -1084,11 +1177,10 @@ function LimitView({
         ) : (
           <>
             <h2 className="font-display mb-3 text-xl font-bold text-foreground">
-              You&apos;ve used your free reflection for today.
+              You&apos;ve used your one free reflection.
             </h2>
             <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
-              Sign in to get 10 reflections every week, or come back tomorrow
-              for another free one.
+              Sign in to get 5 reflections every week.
             </p>
           </>
         )}
@@ -1261,7 +1353,7 @@ export default function StartPage() {
   const [actionPlanResourceUrl, setActionPlanResourceUrl] = useState<
     string | null
   >(null);
-  const [regenerateCount, setRegenerateCount] = useState(0);
+  const [hasRegenerated, setHasRegenerated] = useState(false);
   const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
   const [savedPlansLoading, setSavedPlansLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -1308,11 +1400,11 @@ export default function StartPage() {
       return;
     }
 
+    let anonCount = 0;
     if (userLoaded && !signedIn) {
-      const today = new Date().toISOString().slice(0, 10);
       const stored = JSON.parse(localStorage.getItem(ANON_STORAGE_KEY) ?? "{}");
-      const count = stored.date === today ? (stored.count ?? 0) : 0;
-      if (count >= 1) {
+      anonCount = stored.count ?? 0;
+      if (anonCount >= 1) {
         setPhase("limit");
         return;
       }
@@ -1360,14 +1452,9 @@ export default function StartPage() {
         setMicrosteps(data.microsteps);
         setIsFallback(false);
         if (!signedIn) {
-          const today = new Date().toISOString().slice(0, 10);
-          const stored = JSON.parse(
-            localStorage.getItem(ANON_STORAGE_KEY) ?? "{}",
-          );
-          const count = stored.date === today ? (stored.count ?? 0) : 0;
           localStorage.setItem(
             ANON_STORAGE_KEY,
-            JSON.stringify({ date: today, count: count + 1 }),
+            JSON.stringify({ count: anonCount + 1 }),
           );
         }
         setPhase("results");
@@ -1481,8 +1568,8 @@ export default function StartPage() {
   }
 
   async function handleRegenerate() {
-    if (regenerateCount >= 10 || !chosenKey || !microsteps) return;
-    setRegenerateCount((c) => c + 1);
+    if (hasRegenerated || !chosenKey || !microsteps) return;
+    setHasRegenerated(true);
     setActionPlanLoading(true);
     setPhase("plan");
     const {
@@ -1519,6 +1606,18 @@ export default function StartPage() {
     }
   }
 
+  async function handleSubmitFeedback(feedback: PlanFeedback) {
+    if (!userId) return;
+    const supabase = supabaseRef.current;
+    await supabase.from("plan_feedback").insert({
+      user_id: userId,
+      chosen_key: chosenKey,
+      chosen_step: chosenKey && microsteps ? microsteps[chosenKey] : null,
+      feedback: feedback.feedback,
+      email: feedback.email,
+    });
+  }
+
   function goBack() {
     setServerLimitHit(false);
     setPhase("input");
@@ -1535,7 +1634,7 @@ export default function StartPage() {
     setActionPlanIsFallback(false);
     setActionPlanLoading(false);
     setActionPlanResourceUrl(null);
-    setRegenerateCount(0);
+    setHasRegenerated(false);
     setPhase("input");
   }
 
@@ -1619,11 +1718,12 @@ export default function StartPage() {
         onReset={reset}
         signedIn={signedIn}
         onRegenerate={handleRegenerate}
-        regenerateCount={regenerateCount}
+        hasRegenerated={hasRegenerated}
         actionPlan={actionPlan}
         chosenKey={chosenKey}
         chosenStep={chosenKey && microsteps ? microsteps[chosenKey] : null}
         onSave={handleSavePlan}
+        onSubmitFeedback={handleSubmitFeedback}
       />,
     );
   }
