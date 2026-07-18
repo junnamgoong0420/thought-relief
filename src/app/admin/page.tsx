@@ -25,6 +25,23 @@ type UserPrefs = {
   response_tone: string;
 };
 
+async function listAllUsers(admin: ReturnType<typeof createAdminClient>) {
+  const perPage = 1000;
+  let page = 1;
+  const all: User[] = [];
+  while (true) {
+    const { data, error } = await admin.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+    if (error) throw error;
+    all.push(...data.users);
+    if (data.users.length < perPage) break;
+    page++;
+  }
+  return all;
+}
+
 export default async function AdminPage() {
   const supabase = await createClient();
   const {
@@ -39,13 +56,13 @@ export default async function AdminPage() {
 
   try {
     const admin = createAdminClient();
-    const [usersResult, prefsResult] = await Promise.all([
-      admin.auth.admin.listUsers(),
+    const [allUsers, prefsResult] = await Promise.all([
+      listAllUsers(admin),
       admin
         .from("user_preferences")
         .select("user_id, support_style, response_tone"),
     ]);
-    users = usersResult.data?.users ?? [];
+    users = allUsers;
     const prefsData = (prefsResult.data ?? []) as UserPrefs[];
     prefsMap = new Map(prefsData.map((p) => [p.user_id, p]));
   } catch {
@@ -111,12 +128,6 @@ export default async function AdminPage() {
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       Tone
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Created
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Last sign in
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -125,23 +136,6 @@ export default async function AdminPage() {
                       u.app_metadata?.provider ??
                       u.identities?.[0]?.provider ??
                       EMPTY;
-                    const created = u.created_at
-                      ? new Date(u.created_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })
-                      : EMPTY;
-                    const lastSignIn = u.last_sign_in_at
-                      ? new Date(u.last_sign_in_at).toLocaleDateString(
-                          "en-US",
-                          {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          },
-                        )
-                      : EMPTY;
                     const prefs = prefsMap.get(u.id);
                     const supportLabel = prefs
                       ? (SUPPORT_LABELS[prefs.support_style] ??
@@ -174,12 +168,6 @@ export default async function AdminPage() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {toneLabel}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {created}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {lastSignIn}
                         </td>
                       </tr>
                     );
